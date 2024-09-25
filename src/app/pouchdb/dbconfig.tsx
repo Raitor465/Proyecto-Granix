@@ -9,7 +9,7 @@ interface MyDoc {
 
 // Inicializar la base de datos local y remota
 export const localDB = new PouchDB<MyDoc>('my_database');
-export const remoteDB = new PouchDB<MyDoc>('http://admin:adminpassword@localhost:5984/my_database');
+export const remoteDB = new PouchDB<MyDoc>('http://admin:admin@localhost:5984/my_database');
 
 // Sincronización entre PouchDB y CouchDB (opcionalmente lo puedes manejar en el archivo principal)
 localDB.sync(remoteDB, {
