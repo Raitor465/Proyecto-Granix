@@ -3,23 +3,24 @@
 import React, { useState, useEffect } from 'react';
 import { openDB } from 'idb';
 
-const OfflineFirstForm = () => {
+const DB_NAME = 'OfflineDataDB';
+const STORE_NAME = 'pendingData';
+
+async function initDB() {
+  return openDB(DB_NAME, 1, {
+    upgrade(db) {
+      db.createObjectStore(STORE_NAME, { autoIncrement: true });
+    },
+  });
+}
+
+export default function OfflineFirstDataSubmissionForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
-
-    const initDB = async () => {
-      await openDB('myDatabase', 1, {
-        upgrade(db) {
-          db.createObjectStore('userData', { keyPath: 'id', autoIncrement: true });
-        },
-      });
-    };
-
-    initDB();
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -33,61 +34,74 @@ const OfflineFirstForm = () => {
     };
   }, []);
 
-  const saveData = async (e) => {
-    e.preventDefault();
-    const data = { name, email };
-
-    try {
-      const db = await openDB('myDatabase', 1);
-      await db.add('userData', data);
-
-      if (isOnline) {
-        await syncWithServer();
-      }
-
-      setName('');
-      setEmail('');
-    } catch (error) {
-      console.error('Error al guardar datos:', error);
+  useEffect(() => {
+    if (isOnline) {
+      syncData();
     }
+  }, [isOnline]);
+
+  const saveLocally = async (data) => {
+    const db = await initDB();
+    await db.add(STORE_NAME, data);
   };
 
-  const syncWithServer = async () => {
-    try {
-      const db = await openDB('myDatabase', 1);
-      const allData = await db.getAll('userData');
+  const syncData = async () => {
+    const db = await initDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const items = await store.getAll();
 
-      if (allData.length > 0) {
+    for (const item of items) {
+      try {
         const response = await fetch('/api/saveData', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(allData),
+          body: JSON.stringify([item]),
         });
-
         if (response.ok) {
-          await db.clear('userData');
-          console.log('Datos sincronizados con el servidor');
-        } else {
-          throw new Error('Error al sincronizar con el servidor');
+          await store.delete(item.id);
         }
+      } catch (error) {
+        console.error('Error syncing data:', error);
       }
-    } catch (error) {
-      console.error('Error al sincronizar con el servidor:', error);
     }
   };
 
-  useEffect(() => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const data = { name, email };
+
     if (isOnline) {
-      syncWithServer();
+      try {
+        const response = await fetch('/api/saveData', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify([data]),
+        });
+        if (response.ok) {
+          console.log('Data sent successfully');
+        } else {
+          throw new Error('Failed to send data');
+        }
+      } catch (error) {
+        console.error('Error sending data:', error);
+        await saveLocally(data);
+      }
+    } else {
+      await saveLocally(data);
     }
-  }, [isOnline]);
+
+    setName('');
+    setEmail('');
+  };
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Formulario Offline-First</h2>
-      <form onSubmit={saveData} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="name" className="block mb-1">Nombre:</label>
           <input
@@ -111,7 +125,7 @@ const OfflineFirstForm = () => {
           />
         </div>
         <button type="submit" className="bg-blue-500 text-white p-2 rounded">
-          Guardar
+          Enviar
         </button>
       </form>
       <p className="mt-4">
@@ -119,6 +133,4 @@ const OfflineFirstForm = () => {
       </p>
     </div>
   );
-};
-
-export default OfflineFirstForm;
+}
