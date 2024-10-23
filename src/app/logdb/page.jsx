@@ -4,39 +4,41 @@ import React, { useState, useEffect } from 'react';
 import { openDB } from 'idb';
 import { supabase } from '@/lib/supabase';
 
-// Componente de prueba de conexión
 const TestConnectionButton = () => {
+  const [isTesting, setIsTesting] = useState(false);
+
   const testConnection = async () => {
+    if (isTesting) return;
+    
+    setIsTesting(true);
     try {
       const { data, error } = await supabase
         .from('users')
-        .insert([
-          {
-            name: 'Test User',
-            email: 'test@example.com'
-          }
-        ])
-        .select();
+        .select('*')
+        .limit(1);
 
       if (error) {
-        console.error('Error de inserción:', error);
-        alert('Error al insertar: ' + error.message);
+        console.error('Error de conexión:', error);
+        alert('Error al conectar con Supabase: ' + error.message);
       } else {
-        console.log('Datos insertados:', data);
-        alert('Conexión exitosa! Datos insertados correctamente');
+        console.log('Conexión exitosa');
+        alert('Conexión exitosa con Supabase!');
       }
     } catch (err) {
       console.error('Error:', err);
       alert('Error: ' + err.message);
+    } finally {
+      setIsTesting(false);
     }
   };
 
   return (
     <button 
       onClick={testConnection}
-      className="mt-4 bg-green-500 text-white p-2 rounded hover:bg-green-600"
+      disabled={isTesting}
+      className="mt-4 bg-green-500 text-white p-2 rounded hover:bg-green-600 disabled:bg-gray-400"
     >
-      Probar Conexión
+      {isTesting ? 'Probando...' : 'Probar Conexión'}
     </button>
   );
 };
@@ -45,6 +47,7 @@ const OfflineFirstForm = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [isOnline, setIsOnline] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -52,10 +55,12 @@ const OfflineFirstForm = () => {
     const initDB = async () => {
       await openDB('myDatabase', 1, {
         upgrade(db) {
-          db.createObjectStore('userData', { 
-            keyPath: 'id',
-            autoIncrement: true 
-          });
+          if (!db.objectStoreNames.contains('userData')) {
+            db.createObjectStore('userData', { 
+              keyPath: 'id',
+              autoIncrement: true 
+            });
+          }
         },
       });
     };
@@ -76,6 +81,7 @@ const OfflineFirstForm = () => {
 
   const saveData = async (e) => {
     e.preventDefault();
+    
     const data = { 
       name, 
       email,
@@ -86,6 +92,7 @@ const OfflineFirstForm = () => {
     try {
       const db = await openDB('myDatabase', 1);
       await db.add('userData', data);
+      console.log('Datos guardados en IndexedDB:', data);
 
       if (isOnline) {
         await syncWithSupabase();
@@ -93,55 +100,62 @@ const OfflineFirstForm = () => {
 
       setName('');
       setEmail('');
+      alert('Datos guardados correctamente');
     } catch (error) {
       console.error('Error al guardar datos:', error);
+      alert('Error al guardar los datos: ' + error.message);
     }
   };
 
   const syncWithSupabase = async () => {
+    if (isSyncing) return;
+    
+    setIsSyncing(true);
+    let db;
     try {
-      const db = await openDB('myDatabase', 1);
+      db = await openDB('myDatabase', 1);
+      
+      // Obtener todos los registros no sincronizados
       const tx = db.transaction('userData', 'readwrite');
       const store = tx.objectStore('userData');
-      const unsyncedData = await store.getAll();
-
-      // Filtramos solo los datos no sincronizados
-      const dataToSync = unsyncedData.filter(item => !item.synced);
-
-      if (dataToSync.length > 0) {
-        for (const item of dataToSync) {
-          // Insertamos cada registro en Supabase
+      const unsyncedRecords = await store.getAll();
+      
+      // Filtrar solo los registros no sincronizados
+      const recordsToSync = unsyncedRecords.filter(record => !record.synced);
+      
+      // Sincronizar cada registro
+      for (const record of recordsToSync) {
+        try {
           const { error } = await supabase
             .from('users')
             .insert({
-              name: item.name,
-              email: item.email,
-              created_at: item.created_at
+              name: record.name,
+              email: record.email,
+              created_at: record.created_at
             });
 
           if (!error) {
-            // Marcamos el registro como sincronizado en IndexedDB
-            await store.put({
-              ...item,
-              synced: true
-            });
+            // Marcar como sincronizado y eliminar
+            await store.delete(record.id);
+            console.log('Registro sincronizado y eliminado:', record);
           } else {
-            console.error('Error al sincronizar con Supabase:', error);
+            console.error('Error al sincronizar registro:', error);
           }
+        } catch (syncError) {
+          console.error('Error en la sincronización del registro:', syncError);
         }
-
-        // Eliminamos los registros sincronizados
-        const syncedData = await store.getAll();
-        for (const item of syncedData) {
-          if (item.synced) {
-            await store.delete(item.id);
-          }
-        }
-
-        console.log('Datos sincronizados con Supabase');
       }
+
+      await tx.done;
+      console.log('Sincronización completada');
+
     } catch (error) {
-      console.error('Error en la sincronización:', error);
+      console.error('Error en el proceso de sincronización:', error);
+    } finally {
+      setIsSyncing(false);
+      if (db) {
+        db.close();
+      }
     }
   };
 
@@ -177,8 +191,12 @@ const OfflineFirstForm = () => {
             required
           />
         </div>
-        <button type="submit" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
-          Guardar
+        <button 
+          type="submit" 
+          className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+          disabled={isSyncing}
+        >
+          {isSyncing ? 'Sincronizando...' : 'Guardar'}
         </button>
       </form>
       <p className="mt-4">
