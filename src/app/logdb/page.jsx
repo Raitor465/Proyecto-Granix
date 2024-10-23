@@ -44,10 +44,13 @@ const TestConnectionButton = () => {
 };
 
 const OfflineFirstForm = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: ''
+  });
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState(null);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -55,12 +58,16 @@ const OfflineFirstForm = () => {
     const initDB = async () => {
       await openDB('myDatabase', 1, {
         upgrade(db) {
-          if (!db.objectStoreNames.contains('userData')) {
-            db.createObjectStore('userData', { 
-              keyPath: 'id',
-              autoIncrement: true 
-            });
+          // Eliminar store existente si existe
+          if (db.objectStoreNames.contains('userData')) {
+            db.deleteObjectStore('userData');
           }
+          // Crear nuevo store con índice único
+          const store = db.createObjectStore('userData', { 
+            keyPath: 'id',
+            autoIncrement: true 
+          });
+          store.createIndex('created_at', 'created_at', { unique: true });
         },
       });
     };
@@ -79,13 +86,22 @@ const OfflineFirstForm = () => {
     };
   }, []);
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   const saveData = async (e) => {
     e.preventDefault();
     
+    const now = new Date().toISOString();
     const data = { 
-      name, 
-      email,
-      created_at: new Date().toISOString(),
+      name: formData.name,
+      email: formData.email,
+      created_at: now,
       synced: false
     };
 
@@ -98,8 +114,11 @@ const OfflineFirstForm = () => {
         await syncWithSupabase();
       }
 
-      setName('');
-      setEmail('');
+      setFormData({
+        name: '',
+        email: ''
+      });
+      
       alert('Datos guardados correctamente');
     } catch (error) {
       console.error('Error al guardar datos:', error);
@@ -112,55 +131,57 @@ const OfflineFirstForm = () => {
     
     setIsSyncing(true);
     let db;
+    
     try {
       db = await openDB('myDatabase', 1);
-      
-      // Obtener todos los registros no sincronizados
       const tx = db.transaction('userData', 'readwrite');
       const store = tx.objectStore('userData');
-      const unsyncedRecords = await store.getAll();
       
-      // Filtrar solo los registros no sincronizados
-      const recordsToSync = unsyncedRecords.filter(record => !record.synced);
+      // Obtener solo los registros no sincronizados
+      const records = await store.getAll();
+      const unsynced = records.filter(record => !record.synced);
       
-      // Sincronizar cada registro
-      for (const record of recordsToSync) {
+      for (const record of unsynced) {
         try {
-          const { error } = await supabase
+          // Intentar insertar en Supabase
+          const { data, error } = await supabase
             .from('users')
             .insert({
               name: record.name,
               email: record.email,
               created_at: record.created_at
-            });
+            })
+            .select();
 
           if (!error) {
-            // Marcar como sincronizado y eliminar
+            // Si se insertó correctamente, eliminar de IndexedDB
             await store.delete(record.id);
             console.log('Registro sincronizado y eliminado:', record);
           } else {
-            console.error('Error al sincronizar registro:', error);
+            console.error('Error al sincronizar:', error);
+            // Marcar como sincronizado para no volver a intentar
+            record.synced = true;
+            await store.put(record);
           }
-        } catch (syncError) {
-          console.error('Error en la sincronización del registro:', syncError);
+        } catch (err) {
+          console.error('Error en sincronización:', err);
         }
       }
 
       await tx.done;
-      console.log('Sincronización completada');
-
+      setLastSync(new Date().toISOString());
+      
     } catch (error) {
-      console.error('Error en el proceso de sincronización:', error);
+      console.error('Error en proceso de sincronización:', error);
     } finally {
       setIsSyncing(false);
-      if (db) {
-        db.close();
-      }
+      if (db) db.close();
     }
   };
 
+  // Solo sincronizar cuando se recupera la conexión
   useEffect(() => {
-    if (isOnline) {
+    if (isOnline && lastSync === null) {
       syncWithSupabase();
     }
   }, [isOnline]);
@@ -174,8 +195,9 @@ const OfflineFirstForm = () => {
           <input
             type="text"
             id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            name="name"
+            value={formData.name}
+            onChange={handleInputChange}
             className="w-full p-2 border rounded"
             required
           />
@@ -185,8 +207,9 @@ const OfflineFirstForm = () => {
           <input
             type="email"
             id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            name="email"
+            value={formData.email}
+            onChange={handleInputChange}
             className="w-full p-2 border rounded"
             required
           />
