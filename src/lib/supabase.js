@@ -8,3 +8,5 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
+// NEXT_PUBLIC_SUPABASE_URL=https://gesvxuiyntddmxbkrtig.supabase.co
+//NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdlc3Z4dWl5bnRkZG14YmtydGlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjg5Mzc3NzIsImV4cCI6MjA0NDUxMzc3Mn0.o37i_L1qlxXX-dh4ofOANzV-YuaNbSEv5RJAkjw2VAM            
