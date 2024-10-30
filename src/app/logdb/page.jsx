@@ -58,11 +58,9 @@ const OfflineFirstForm = () => {
     const initDB = async () => {
       await openDB('myDatabase', 1, {
         upgrade(db) {
-          // Eliminar store existente si existe
           if (db.objectStoreNames.contains('userData')) {
             db.deleteObjectStore('userData');
           }
-          // Crear nuevo store con índice único
           const store = db.createObjectStore('userData', { 
             keyPath: 'id',
             autoIncrement: true 
@@ -126,24 +124,36 @@ const OfflineFirstForm = () => {
     }
   };
 
+  const clearLocalData = async () => {
+    try {
+      const db = await openDB('myDatabase', 1);
+      const tx = db.transaction('userData', 'readwrite');
+      const store = tx.objectStore('userData');
+      await store.clear();
+      await tx.done;
+      console.log('Datos locales limpiados correctamente');
+    } catch (error) {
+      console.error('Error al limpiar datos locales:', error);
+    }
+  };
+
   const syncWithSupabase = async () => {
     if (isSyncing) return;
     
     setIsSyncing(true);
     let db;
+    let syncSuccessful = true;
     
     try {
       db = await openDB('myDatabase', 1);
       const tx = db.transaction('userData', 'readwrite');
       const store = tx.objectStore('userData');
       
-      // Obtener solo los registros no sincronizados
       const records = await store.getAll();
       const unsynced = records.filter(record => !record.synced);
       
       for (const record of unsynced) {
         try {
-          // Intentar insertar en Supabase
           const { data, error } = await supabase
             .from('users')
             .insert({
@@ -153,23 +163,26 @@ const OfflineFirstForm = () => {
             })
             .select();
 
-          if (!error) {
-            // Si se insertó correctamente, eliminar de IndexedDB
-            await store.delete(record.id);
-            console.log('Registro sincronizado y eliminado:', record);
-          } else {
+          if (error) {
             console.error('Error al sincronizar:', error);
-            // Marcar como sincronizado para no volver a intentar
-            record.synced = true;
-            await store.put(record);
+            syncSuccessful = false;
+            break;
           }
         } catch (err) {
           console.error('Error en sincronización:', err);
+          syncSuccessful = false;
+          break;
         }
       }
 
       await tx.done;
-      setLastSync(new Date().toISOString());
+      
+      // Solo limpiamos los datos locales si la sincronización fue exitosa
+      if (syncSuccessful) {
+        await clearLocalData();
+        setLastSync(new Date().toISOString());
+        console.log('Sincronización completada y datos locales limpiados');
+      }
       
     } catch (error) {
       console.error('Error en proceso de sincronización:', error);
@@ -179,7 +192,6 @@ const OfflineFirstForm = () => {
     }
   };
 
-  // Solo sincronizar cuando se recupera la conexión
   useEffect(() => {
     if (isOnline && lastSync === null) {
       syncWithSupabase();
