@@ -2,7 +2,40 @@
 
 import React, { useState, useEffect } from 'react';
 import { openDB } from 'idb';
+import {setUpDataBase, eliminarBaseDeDatosCompleta} from '../../lib/indexedDB'
 import { supabase } from '@/lib/supabase';
+//import { vendored } from 'next/dist/server/future/route-modules/app-page/module.compiled';
+
+async function MirarVendedores(){
+  const db = await setUpDataBase();
+  const tx = db.transaction('Vendedor','readonly');
+  // console.log(tx.store) 
+  const vendedores = await tx.store.getAll(); // Obtiene todos los vendedores
+  // console.log(vendedores)
+  tx.done;             
+
+
+  // Para eliminar el primer id del vendedor
+  // const tx = db.transaction('Vendedor','readwrite');
+  //await tx.store.delete(1)
+
+
+}
+
+export async function guardarVendedorLocal(vendedor){
+  try{
+    const db = await setUpDataBase();
+    const tx = db.transaction('Vendedor','readwrite');
+    await tx.store.put(vendedor);
+    await tx.done
+
+    console.log('Vendedor guardado localmente');
+  }catch(error){
+    console.error('Error al guardar el vendedor',error)
+  }
+}
+
+
 
 const TestConnectionButton = () => {
   const [isTesting, setIsTesting] = useState(false);
@@ -15,8 +48,9 @@ const TestConnectionButton = () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .limit(1);
-
+        .eq('id',37)
+        .limit(10);
+      console.log(data)
       if (error) {
         console.error('Error de conexión:', error);
         alert('Error al conectar con Supabase: ' + error.message);
@@ -43,10 +77,47 @@ const TestConnectionButton = () => {
   );
 };
 
+const login = async(numero , clave) => {
+  try {
+      const {data: vendedorbext , error} = await supabase
+      .from('vendedores')
+      .select('*')
+      .eq('numero',numero)
+      .eq('clave',clave)
+      .single();
+
+      //console.log('Número:', numero);
+      //console.log('Clave:', clave);
+      //console.log(vendedor)
+
+      if (error) throw error;
+      if (vendedorbext){
+          const vendedorl = {
+            numero: vendedorbext.numero,
+            sincronizado: true,
+            clave: vendedorbext.clave,
+          }
+
+      await guardarVendedorLocal(vendedorl);
+      //eliminarBaseDeDatosCompleta();
+      MirarVendedores();
+
+    }
+      return vendedorbext;
+  }catch(error){
+    console.error('Error durante el login', error);
+    alert('Ocurrió un erorr al iniciar sesión');
+    
+  }
+
+}
+
+
 const OfflineFirstForm = () => {
   const [formData, setFormData] = useState({
-    name: '',
-    email: ''
+    //vendedor_id: '',
+    numero: '',
+    clave: ''
   });
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -55,24 +126,24 @@ const OfflineFirstForm = () => {
   useEffect(() => {
     setIsOnline(navigator.onLine);
 
-    const initDB = async () => {
-      await openDB('myDatabase', 1, {
-        upgrade(db) {
-          // Eliminar store existente si existe
-          if (db.objectStoreNames.contains('userData')) {
-            db.deleteObjectStore('userData');
-          }
-          // Crear nuevo store con índice único
-          const store = db.createObjectStore('userData', { 
-            keyPath: 'id',
-            autoIncrement: true 
-          });
-          store.createIndex('created_at', 'created_at', { unique: true });
-        },
-      });
-    };
+    // const initDB = async () => {
+    //   await openDB('myDatabase', 1, {
+    //     upgrade(db) {
+    //       // Eliminar store existente si existe
+    //       if (db.objectStoreNames.contains('userData')) {
+    //         db.deleteObjectStore('userData');
+    //       }
+    //       // Crear nuevo store con índice único
+    //       const store = db.createObjectStore('userData', { 
+    //         keyPath: 'id',
+    //         autoIncrement: true 
+    //       });
+    //       store.createIndex('created_at', 'created_at', { unique: true });
+    //     },
+    //   });
+    // };
 
-    initDB();
+    // initDB();
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -99,27 +170,20 @@ const OfflineFirstForm = () => {
     
     const now = new Date().toISOString();
     const data = { 
-      name: formData.name,
-      email: formData.email,
-      created_at: now,
-      synced: false
+      numero: Number(formData.numero), // Asegúrate de que sea un número
+      clave : formData.clave,
+      // email: formData.email,
+      //created_at: now,
+      //sincronizado: false
     };
 
     try {
-      const db = await openDB('myDatabase', 1);
-      await db.add('userData', data);
-      console.log('Datos guardados en IndexedDB:', data);
-
-      if (isOnline) {
-        await syncWithSupabase();
+      const vendedor = await login(data.numero,data.clave);
+      console.log(vendedor)
+      if (vendedor){
+        alert('Datos guardados correctamente')
+        setFormData({numero : '', clave: ''});
       }
-
-      setFormData({
-        name: '',
-        email: ''
-      });
-      
-      alert('Datos guardados correctamente');
     } catch (error) {
       console.error('Error al guardar datos:', error);
       alert('Error al guardar los datos: ' + error.message);
@@ -169,7 +233,7 @@ const OfflineFirstForm = () => {
       }
 
       await tx.done;
-      setLastSync(new Date().toISOString());
+      //setLastSync(new Date().toISOString());
       
     } catch (error) {
       console.error('Error en proceso de sincronización:', error);
@@ -180,35 +244,35 @@ const OfflineFirstForm = () => {
   };
 
   // Solo sincronizar cuando se recupera la conexión
-  useEffect(() => {
-    if (isOnline && lastSync === null) {
-      syncWithSupabase();
-    }
-  }, [isOnline]);
+  // useEffect(() => {
+  //   if (isOnline && lastSync === null) {
+  //     syncWithSupabase();
+  //   }
+  // }, [isOnline]);
 
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">Formulario Offline-First con Supabase</h2>
       <form onSubmit={saveData} className="space-y-4">
         <div>
-          <label htmlFor="name" className="block mb-1">Nombre:</label>
+          <label htmlFor="numero" className="block mb-1">Número:</label>
           <input
             type="text"
-            id="name"
-            name="name"
-            value={formData.name}
+            id="numero"
+            name="numero"
+            value={formData.numero}
             onChange={handleInputChange}
             className="w-full p-2 border rounded"
             required
           />
         </div>
         <div>
-          <label htmlFor="email" className="block mb-1">Email:</label>
+          <label htmlFor="clave" className="block mb-1">Clave:</label>
           <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
+            type="password"
+            id="clave"
+            name="clave"
+            value={formData.clave}
             onChange={handleInputChange}
             className="w-full p-2 border rounded"
             required
