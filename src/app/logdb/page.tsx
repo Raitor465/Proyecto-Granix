@@ -1,10 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { openDB } from 'idb';
 import {setUpDataBase, eliminarBaseDeDatosCompleta} from '../../lib/indexedDB'
 import { supabase } from '@/lib/supabase';
-//import { vendored } from 'next/dist/server/future/route-modules/app-page/module.compiled';
+import { useRouter } from 'next/navigation';
+// import { useRouter } from 'next/navigation';
+
+import { error } from 'console';
+// import {CrearRuta} from '../crearruta/page'
+import { useVendedor } from '@/lib/vendedorContext';
+
 
 async function MirarVendedores(){
   const db = await setUpDataBase();
@@ -14,15 +20,12 @@ async function MirarVendedores(){
   // console.log(vendedores)
   tx.done;             
 
-
   // Para eliminar el primer id del vendedor
   // const tx = db.transaction('Vendedor','readwrite');
   //await tx.store.delete(1)
-
-
 }
 
-export async function guardarVendedorLocal(vendedor){
+export async function guardarVendedorLocal(vendedor: any){
   try{
     const db = await setUpDataBase();
     const tx = db.transaction('Vendedor','readwrite');
@@ -34,8 +37,6 @@ export async function guardarVendedorLocal(vendedor){
     console.error('Error al guardar el vendedor',error)
   }
 }
-
-
 
 const TestConnectionButton = () => {
   const [isTesting, setIsTesting] = useState(false);
@@ -58,9 +59,11 @@ const TestConnectionButton = () => {
         console.log('Conexión exitosa');
         alert('Conexión exitosa con Supabase!');
       }
-    } catch (err) {
+    } catch (err ) {
+      if ( err instanceof Error){
+        alert('Error: ' + err.message);
+      }
       console.error('Error:', err);
-      alert('Error: ' + err.message);
     } finally {
       setIsTesting(false);
     }
@@ -77,7 +80,13 @@ const TestConnectionButton = () => {
   );
 };
 
-const login = async(numero , clave) => {
+interface Vendedor{
+  numero : number,
+  clave : string
+}
+
+
+const login = async(numero : any , clave : any) => {
   try {
       const {data: vendedorbext , error} = await supabase
       .from('vendedores')
@@ -97,13 +106,17 @@ const login = async(numero , clave) => {
             sincronizado: true,
             clave: vendedorbext.clave,
           }
+          // setVendedorId(vendedorbext.numero)
+          //setVendedor(vendedorbext.numero);
+
+      //setVendedorId(vendedorbext.numero); // Cambia esto a vendedorId si es necesario
 
       await guardarVendedorLocal(vendedorl);
+
       //eliminarBaseDeDatosCompleta();
       MirarVendedores();
-
-    }
       return vendedorbext;
+    }
   }catch(error){
     console.error('Error durante el login', error);
     alert('Ocurrió un erorr al iniciar sesión');
@@ -113,40 +126,31 @@ const login = async(numero , clave) => {
 }
 
 
-const OfflineFirstForm = () => {
+const OfflineFirstForm: React.FC = () => {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     //vendedor_id: '',
     numero: '',
     clave: ''
   });
+  const { setVendedorId } = useVendedor();
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSync, setLastSync] = useState(null);
+  // const [lastSync, setLastSync] = useState(null);
+  // const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
 
-    // const initDB = async () => {
-    //   await openDB('myDatabase', 1, {
-    //     upgrade(db) {
-    //       // Eliminar store existente si existe
-    //       if (db.objectStoreNames.contains('userData')) {
-    //         db.deleteObjectStore('userData');
-    //       }
-    //       // Crear nuevo store con índice único
-    //       const store = db.createObjectStore('userData', { 
-    //         keyPath: 'id',
-    //         autoIncrement: true 
-    //       });
-    //       store.createIndex('created_at', 'created_at', { unique: true });
-    //     },
-    //   });
-    // };
+  
 
-    // initDB();
-
+  
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
+
+    if (sessionStorage.getItem('isLoggedIn') === 'true') {
+      router.push('/crearruta'); // Redirige a CrearRuta
+    }
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -155,9 +159,9 @@ const OfflineFirstForm = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [router]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e : ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -165,7 +169,7 @@ const OfflineFirstForm = () => {
     }));
   };
 
-  const saveData = async (e) => {
+  const saveData = async (e : React.FormEvent) => {
     e.preventDefault();
     
     const now = new Date().toISOString();
@@ -181,74 +185,21 @@ const OfflineFirstForm = () => {
       const vendedor = await login(data.numero,data.clave);
       console.log(vendedor)
       if (vendedor){
+        setVendedorId(vendedor.numero); // Establecer el ID del vendedor
+
         alert('Datos guardados correctamente')
         setFormData({numero : '', clave: ''});
+        //setIsLoggedIn(true)
+        sessionStorage.setItem('isLoggedIn', 'true');
+        router.push('/crearruta');
       }
     } catch (error) {
+      if (error instanceof Error) { 
+        alert('Error al guardar los datos: ' + error.message);
+      }
       console.error('Error al guardar datos:', error);
-      alert('Error al guardar los datos: ' + error.message);
     }
   };
-
-  const syncWithSupabase = async () => {
-    if (isSyncing) return;
-    
-    setIsSyncing(true);
-    let db;
-    
-    try {
-      db = await openDB('myDatabase', 1);
-      const tx = db.transaction('userData', 'readwrite');
-      const store = tx.objectStore('userData');
-      
-      // Obtener solo los registros no sincronizados
-      const records = await store.getAll();
-      const unsynced = records.filter(record => !record.synced);
-      
-      for (const record of unsynced) {
-        try {
-          // Intentar insertar en Supabase
-          const { data, error } = await supabase
-            .from('users')
-            .insert({
-              name: record.name,
-              email: record.email,
-              created_at: record.created_at
-            })
-            .select();
-
-          if (!error) {
-            // Si se insertó correctamente, eliminar de IndexedDB
-            await store.delete(record.id);
-            console.log('Registro sincronizado y eliminado:', record);
-          } else {
-            console.error('Error al sincronizar:', error);
-            // Marcar como sincronizado para no volver a intentar
-            record.synced = true;
-            await store.put(record);
-          }
-        } catch (err) {
-          console.error('Error en sincronización:', err);
-        }
-      }
-
-      await tx.done;
-      //setLastSync(new Date().toISOString());
-      
-    } catch (error) {
-      console.error('Error en proceso de sincronización:', error);
-    } finally {
-      setIsSyncing(false);
-      if (db) db.close();
-    }
-  };
-
-  // Solo sincronizar cuando se recupera la conexión
-  // useEffect(() => {
-  //   if (isOnline && lastSync === null) {
-  //     syncWithSupabase();
-  //   }
-  // }, [isOnline]);
 
   return (
     <div className="p-4">
@@ -278,6 +229,7 @@ const OfflineFirstForm = () => {
             required
           />
         </div>
+        
         <button 
           type="submit" 
           className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
@@ -286,6 +238,7 @@ const OfflineFirstForm = () => {
           {isSyncing ? 'Sincronizando...' : 'Guardar'}
         </button>
       </form>
+        
       <p className="mt-4">
         Estado: <span className={`font-bold ${isOnline ? 'text-green-500' : 'text-red-500'}`}>
           {isOnline ? 'En línea' : 'Fuera de línea'}

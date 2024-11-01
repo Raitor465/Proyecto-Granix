@@ -22,6 +22,24 @@ export async function setUpDataBase() {
             vendedorStore.createIndex('sincronizado','sincronizado',{unique: false});
             vendedorStore.createIndex('clave','clave',{unique: false});
 
+            const provinciaStore = database.createObjectStore('Provincia', {keyPath : 'provincia_id'})
+            provinciaStore.createIndex('nombre', 'nombre',{unique: true});
+            
+            const localidadStore = database.createObjectStore('Localidad', {keyPath : 'localidad_id'})
+            localidadStore.createIndex('nombre','nombre',{unique: true});
+            localidadStore.createIndex('provincia_id','provincia_id',{unique:false});
+
+            const zonaStore = database.createObjectStore('Zona', {keyPath : 'zona_id'})
+            zonaStore.createIndex('nombre','nombre',{unique: true});
+            zonaStore.createIndex('barrio','barrio',{unique: true});
+            zonaStore.createIndex('localidad_id','localidad_id',{unique:false});
+
+            const rutavisitaStore = database.createObjectStore('Zona', {keyPath : 'ruta_visita_id'})
+            rutavisitaStore.createIndex('dia','dia',{unique: true});
+            rutavisitaStore.createIndex('vendedor_id','vendedor_id',{unique: false});
+            rutavisitaStore.createIndex('zona_id','zona_id',{unique:false});
+
+
             //vendedorStore.createIndex('contraseña','contraseña',{unique: false});
             // database.createObjectStore('Zona', { keyPath: 'zona_id' });
             // database.createObjectStore('RutaVisita', { keyPath: 'ruta_visita_id' });
