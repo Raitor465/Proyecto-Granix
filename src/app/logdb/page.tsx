@@ -1,14 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, ChangeEvent } from 'react';
-import { openDB } from 'idb';
 import {setUpDataBase, eliminarBaseDeDatosCompleta} from '../../lib/indexedDB'
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-// import { useRouter } from 'next/navigation';
-
-import { error } from 'console';
-// import {CrearRuta} from '../crearruta/page'
 import { useVendedor } from '@/lib/vendedorContext';
 
 
@@ -113,8 +108,6 @@ const login = async(numero : any , clave : any) => {
 
       await guardarVendedorLocal(vendedorl);
 
-      //eliminarBaseDeDatosCompleta();
-      MirarVendedores();
       return vendedorbext;
     }
   }catch(error){
@@ -172,7 +165,7 @@ const OfflineFirstForm: React.FC = () => {
   const saveData = async (e : React.FormEvent) => {
     e.preventDefault();
     
-    const now = new Date().toISOString();
+    // const now = new Date().toISOString();
     const data = { 
       numero: Number(formData.numero), // Asegúrate de que sea un número
       clave : formData.clave,
@@ -185,14 +178,38 @@ const OfflineFirstForm: React.FC = () => {
       const vendedor = await login(data.numero,data.clave);
       console.log(vendedor)
       if (vendedor){
-        setVendedorId(vendedor.numero); // Establecer el ID del vendedor
-
         alert('Datos guardados correctamente')
+        console.log(data.numero)
+        const { data : rutaVisita, error } = await supabase
+        .from('ClienteSucursal')
+        .select(`
+          nombre,orden_visita               
+          RutaDeVisita: ruta_visita_id (nombre,ruta_visita_id),
+          Direccion(calle,numero)         
+        `)
+        .eq('ruta_visita_id.numero_vend', data.numero)
+        .not('RutaDeVisita', 'is', null); // Excluye registros donde RutaDeVisita es null
+        
+        if (rutaVisita && rutaVisita.length > 0) {
+          const db = await setUpDataBase();
+          const tx = db.transaction('RutaDeVisita', 'readwrite');
+        
+          for (const ruta of rutaVisita){
+            await tx.store.put(ruta);
+          }
+          await tx.done;
+        }
+
+
         setFormData({numero : '', clave: ''});
         //setIsLoggedIn(true)
+        
+        
         sessionStorage.setItem('isLoggedIn', 'true');
         router.push('/crearruta');
       }
+
+      //await eliminarBaseDeDatosCompleta()
     } catch (error) {
       if (error instanceof Error) { 
         alert('Error al guardar los datos: ' + error.message);

@@ -4,59 +4,66 @@ import React, { useState, useEffect } from 'react';
 import {setUpDataBase, eliminarBaseDeDatosCompleta} from '../../lib/indexedDB'
 import { supabase } from '@/lib/supabase';
 import { useVendedor } from '@/lib/vendedorContext';
+import { useRouter } from 'next/navigation';
 
-interface Zona {
-    zona_id: number;
-    nombre: string;
-}
+
+// interface Zona {
+//     zona_id: number;
+//     nombre: string;
+// }
+
+
 
 interface RutaDeVisita {
-    dia: string;
-    Zona: Zona[]; // Cambiado a un arreglo de objetos Zona
+    id : number,
+    nombre : string,
+    orden_visita : number,
+    Direccion : {calle : string, numero : number}
+    RutaDeVisita : {nombre : string}    
 }
 
 
 export const CrearRuta: React.FC = () => {
 
-    const [RutaInfo, setRutaInfo] = useState<RutaDeVisita[]>([]); 
-
-
+    const [rutaInfo, setRutaInfo] = useState<RutaDeVisita[]>([]); 
+    const [sortOrder , setSortOrder] = useState('asc');
+    const router = useRouter();
 
     async function RutaVisitaInfo() {
-        let { data, error } = await supabase
-        .from('RutaDeVisita')
-        .select(`
-          dia,
-          Zona (zona_id,nombre)
-        `);
-        
-        if (error) {
-            console.error("Error al obtener datos:", error);
-        } else {
-            setRutaInfo(data as RutaDeVisita[]); // Asegúrate de que data sea del tipo correcto
-        }
+
+        const db = await setUpDataBase();
+        const tx = db.transaction('RutaDeVisita','readonly');
+        const rutas = await tx.store.getAll();
+        setRutaInfo(rutas)
+        tx.done;
     }
     useEffect(() => {
         RutaVisitaInfo(); // Llama a la función para cargar los datos cuando el componente se monta
     }, []);
 
 
-    // const { vendedorId } = useVendedor(); // Asegúrate de que esto esté configurado en tu contexto.
+    const handleSortOrderChange = (event: { target: { value: string; }; }) => {
+        setSortOrder(event.target.value);
+    }
 
-    // useEffect(() => {
-    //   // Puedes usar el vendedorId para cargar información relacionada o hacer solicitudes.
-    //   if (vendedorId) {
-    //     console.log('ID del vendedor:', vendedorId);
-    //     // Lógica para cargar rutas o hacer algo relacionado con el vendedor.
-    //   }
-    // }, [vendedorId]);
+    const handleSubmit = async (event: { preventDefault: () => void; }) => {
+        event.preventDefault();
+        // const queryParams= new URLSearchParams({sortOrder}).toString();
 
+        // router.push(`/rutavisita?${queryParams}`);
+        const db = await setUpDataBase();
+        const tx = db.transaction('RutaDeVisita','write');
+        const rutasFiltradas = await tx.store.getAll();
+        tx.done;
+
+
+    };
 
     useEffect(() => {
-        if (RutaInfo !== null) {
-            console.log("Datos de RutaInfo:", RutaInfo); // Registra los datos una vez que se actualizan
+        if (rutaInfo !== null) {
+            console.log("Datos de RutaInfo:", rutaInfo); // Registra los datos una vez que se actualizan
         }
-    }, [RutaInfo]);
+    }, [rutaInfo]);
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
@@ -65,32 +72,32 @@ export const CrearRuta: React.FC = () => {
                     {/* Columna de Carga de Datos */}
                     <div className="space-y-4">
                         {/* Día */}
-                        <div>
-                            <select
+                        {/* <div> */}
+                            {/* <select
                                 name="dia"
                                 required
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
                                 defaultValue=""
-                            >
-                                {RutaInfo.map((ruta) => (
+                            > */}
+                                {/* {RutaInfo.map((ruta) => (
                                 <option key={ruta.dia} label={ruta.dia}></option>
-                            ))}
-                            </select>
-                        </div>
+                            ))} */}
+                            {/* </select> */}
+                        {/* </div> */}
 
                         {/* Ruta */}
                         <div>
-                            <select
+                            {/* <select
                                 name="ruta"
                                 required
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
                                 defaultValue=""
-                            >
+                            > */}
                                 {/* <option value="" disabled hidden>Ruta</option>
                                 <option value="ruta1">Ruta 1</option>
                                 <option value="ruta2">Ruta 2</option>
                                 <option value="ruta3">Ruta 3</option> */}
-                                {RutaInfo.map((ruta) => {
+                                {/* {RutaInfo.map((ruta) => {
                                 // Verifica si Zona es un arreglo, si no, conviértelo en un arreglo
                                 const zonas = Array.isArray(ruta.Zona) ? ruta.Zona : [ruta.Zona]; // Conviértelo a un arreglo
 
@@ -98,21 +105,35 @@ export const CrearRuta: React.FC = () => {
                                     <option key={zona.zona_id} value={zona.zona_id}>
                                         {zona.nombre}
                                     </option>
-                                ));
-                            })}
+                                )); */}
+                            {/* })} */}
+                            {/* </select> */}
+
+                            <select
+                                name="ruta"
+                                required
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                                defaultValue=""
+                            >
+                                <option value="" disabled hidden>Seleccione una ruta</option>
+                                {rutaInfo.map((ruta) => (
+                                    <option key={ruta.id} value={ruta.id}>
+                                        {ruta.RutaDeVisita.nombre}
+                                    </option>
+                                ))}
                             </select>
                         </div>
 
                         {/* Ascendente */}
                         <div>
                             <select
-                                name="ascendente"
+                                name="orden"
                                 required
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
-                                defaultValue=""
+                                value= {sortOrder} onChange={handleSortOrderChange}
                             >
-                                <option value="1" disabled hidden>Ascendente</option>
-                                <option value="2">Descendente</option>
+                                <option value="asc">Ascendente</option>
+                                <option value="desc">Descendente</option>
                             </select>
                         </div>
 
@@ -124,7 +145,7 @@ export const CrearRuta: React.FC = () => {
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
                                 defaultValue=""
                             >
-                                <option value="" disabled hidden>Orden | Direccion | Nombre</option>
+                                <option value="" disabled hidden> Orden | Direccion | Nombre</option>
                             </select>
                         </div>
 
