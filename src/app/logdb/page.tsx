@@ -1,37 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, ChangeEvent } from 'react';
-import {setUpDataBase, eliminarBaseDeDatosCompleta} from '../../lib/indexedDB'
+import React, { useState, useEffect } from 'react';
+import { openDB } from 'idb';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
-import { useVendedor } from '@/lib/vendedorContext';
-
-
-async function MirarVendedores(){
-  const db = await setUpDataBase();
-  const tx = db.transaction('Vendedor','readonly');
-  // console.log(tx.store) 
-  const vendedores = await tx.store.getAll(); // Obtiene todos los vendedores
-  // console.log(vendedores)
-  tx.done;             
-
-  // Para eliminar el primer id del vendedor
-  // const tx = db.transaction('Vendedor','readwrite');
-  //await tx.store.delete(1)
-}
-
-export async function guardarVendedorLocal(vendedor: any){
-  try{
-    const db = await setUpDataBase();
-    const tx = db.transaction('Vendedor','readwrite');
-    await tx.store.put(vendedor);
-    await tx.done
-
-    console.log('Vendedor guardado localmente');
-  }catch(error){
-    console.error('Error al guardar el vendedor',error)
-  }
-}
 
 const TestConnectionButton = () => {
   const [isTesting, setIsTesting] = useState(false);
@@ -44,9 +15,8 @@ const TestConnectionButton = () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('id',37)
-        .limit(10);
-      console.log(data)
+        .limit(1);
+
       if (error) {
         console.error('Error de conexión:', error);
         alert('Error al conectar con Supabase: ' + error.message);
@@ -54,11 +24,9 @@ const TestConnectionButton = () => {
         console.log('Conexión exitosa');
         alert('Conexión exitosa con Supabase!');
       }
-    } catch (err ) {
-      if ( err instanceof Error){
-        alert('Error: ' + err.message);
-      }
+    } catch (err) {
       console.error('Error:', err);
+      alert('Error: ' + err.message);
     } finally {
       setIsTesting(false);
     }
@@ -75,75 +43,37 @@ const TestConnectionButton = () => {
   );
 };
 
-interface Vendedor{
-  numero : number,
-  clave : string
-}
-
-
-const login = async(numero : any , clave : any) => {
-  try {
-      const {data: vendedorbext , error} = await supabase
-      .from('vendedores')
-      .select('*')
-      .eq('numero',numero)
-      .eq('clave',clave)
-      .single();
-
-      //console.log('Número:', numero);
-      //console.log('Clave:', clave);
-      //console.log(vendedor)
-
-      if (error) throw error;
-      if (vendedorbext){
-          const vendedorl = {
-            numero: vendedorbext.numero,
-            sincronizado: true,
-            clave: vendedorbext.clave,
-          }
-          // setVendedorId(vendedorbext.numero)
-          //setVendedor(vendedorbext.numero);
-
-      //setVendedorId(vendedorbext.numero); // Cambia esto a vendedorId si es necesario
-
-      await guardarVendedorLocal(vendedorl);
-
-      return vendedorbext;
-    }
-  }catch(error){
-    console.error('Error durante el login', error);
-    alert('Ocurrió un erorr al iniciar sesión');
-    
-  }
-
-}
-
-
-const OfflineFirstForm: React.FC = () => {
-  const router = useRouter();
+const OfflineFirstForm = () => {
   const [formData, setFormData] = useState({
-    //vendedor_id: '',
-    numero: '',
-    clave: ''
+    name: '',
+    email: ''
   });
-  const { setVendedorId } = useVendedor();
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  // const [lastSync, setLastSync] = useState(null);
-  // const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [lastSync, setLastSync] = useState(null);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
 
-  
+    const initDB = async () => {
+      await openDB('myDatabase', 1, {
+        upgrade(db) {
+          if (db.objectStoreNames.contains('userData')) {
+            db.deleteObjectStore('userData');
+          }
+          const store = db.createObjectStore('userData', { 
+            keyPath: 'id',
+            autoIncrement: true 
+          });
+          store.createIndex('created_at', 'created_at', { unique: true });
+        },
+      });
+    };
 
-  
+    initDB();
+
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-
-    if (sessionStorage.getItem('isLoggedIn') === 'true') {
-      router.push('/crearruta'); // Redirige a CrearRuta
-    }
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -152,9 +82,9 @@ const OfflineFirstForm: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [router]);
+  }, []);
 
-  const handleInputChange = (e : ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -162,91 +92,140 @@ const OfflineFirstForm: React.FC = () => {
     }));
   };
 
-  const saveData = async (e : React.FormEvent) => {
+  const saveData = async (e) => {
     e.preventDefault();
     
-    // const now = new Date().toISOString();
+    const now = new Date().toISOString();
     const data = { 
-      numero: Number(formData.numero), // Asegúrate de que sea un número
-      clave : formData.clave,
-      // email: formData.email,
-      //created_at: now,
-      //sincronizado: false
+      name: formData.name,
+      email: formData.email,
+      created_at: now,
+      synced: false
     };
 
     try {
-      const vendedor = await login(data.numero,data.clave);
-      console.log(vendedor)
-      if (vendedor){
-        alert('Datos guardados correctamente')
-        console.log(data.numero)
-        const { data : rutaVisita, error } = await supabase
-        .from('ClienteSucursal')
-        .select(`
-          nombre,orden_visita               
-          RutaDeVisita: ruta_visita_id (nombre,ruta_visita_id),
-          Direccion(calle,numero)         
-        `)
-        .eq('ruta_visita_id.numero_vend', data.numero)
-        .not('RutaDeVisita', 'is', null); // Excluye registros donde RutaDeVisita es null
-        
-        if (rutaVisita && rutaVisita.length > 0) {
-          const db = await setUpDataBase();
-          const tx = db.transaction('RutaDeVisita', 'readwrite');
-        
-          for (const ruta of rutaVisita){
-            await tx.store.put(ruta);
-          }
-          await tx.done;
-        }
+      const db = await openDB('myDatabase', 1);
+      await db.add('userData', data);
+      console.log('Datos guardados en IndexedDB:', data);
 
-
-        setFormData({numero : '', clave: ''});
-        //setIsLoggedIn(true)
-        
-        
-        sessionStorage.setItem('isLoggedIn', 'true');
-        router.push('/crearruta');
+      if (isOnline) {
+        await syncWithSupabase();
       }
 
-      //await eliminarBaseDeDatosCompleta()
+      setFormData({
+        name: '',
+        email: ''
+      });
+      
+      alert('Datos guardados correctamente');
     } catch (error) {
-      if (error instanceof Error) { 
-        alert('Error al guardar los datos: ' + error.message);
-      }
       console.error('Error al guardar datos:', error);
+      alert('Error al guardar los datos: ' + error.message);
     }
   };
+
+  const clearLocalData = async () => {
+    try {
+      const db = await openDB('myDatabase', 1);
+      const tx = db.transaction('userData', 'readwrite');
+      const store = tx.objectStore('userData');
+      await store.clear();
+      await tx.done;
+      console.log('Datos locales limpiados correctamente');
+    } catch (error) {
+      console.error('Error al limpiar datos locales:', error);
+    }
+  };
+
+  const syncWithSupabase = async () => {
+    if (isSyncing) return;
+    
+    setIsSyncing(true);
+    let db;
+    let syncSuccessful = true;
+    
+    try {
+      db = await openDB('myDatabase', 1);
+      const tx = db.transaction('userData', 'readwrite');
+      const store = tx.objectStore('userData');
+      
+      const records = await store.getAll();
+      const unsynced = records.filter(record => !record.synced);
+      
+      for (const record of unsynced) {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .insert({
+              name: record.name,
+              email: record.email,
+              created_at: record.created_at
+            })
+            .select();
+
+          if (error) {
+            console.error('Error al sincronizar:', error);
+            syncSuccessful = false;
+            break;
+          }
+        } catch (err) {
+          console.error('Error en sincronización:', err);
+          syncSuccessful = false;
+          break;
+        }
+      }
+
+      await tx.done;
+      
+      // Solo limpiamos los datos locales si la sincronización fue exitosa
+      if (syncSuccessful) {
+        await clearLocalData();
+        setLastSync(new Date().toISOString());
+        console.log('Sincronización completada y datos locales limpiados');
+      }
+      
+    } catch (error) {
+      console.error('Error en proceso de sincronización:', error);
+    } finally {
+      setIsSyncing(false);
+      if (db) db.close();
+    }
+  };
+
+  useEffect(() => {
+    if (isOnline && lastSync === null) {
+      syncWithSupabase();
+    }
+  }, [isOnline]);
 
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">Formulario Offline-First con Supabase</h2>
       <form onSubmit={saveData} className="space-y-4">
         <div>
-          <label htmlFor="numero" className="block mb-1">Número:</label>
+          <label htmlFor="name" className="block mb-1">Nombre:</label>
           <input
             type="text"
-            id="numero"
-            name="numero"
-            value={formData.numero}
+            id="name"
+            name="name"
+            value={formData.name}
             onChange={handleInputChange}
             className="w-full p-2 border rounded"
             required
           />
         </div>
         <div>
-          <label htmlFor="clave" className="block mb-1">Clave:</label>
+          <label htmlFor="email" className="block mb-1">Email:</label>
           <input
-            type="password"
-            id="clave"
-            name="clave"
-            value={formData.clave}
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
             onChange={handleInputChange}
             className="w-full p-2 border rounded"
             required
           />
         </div>
-        
         <button 
           type="submit" 
           className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
@@ -255,7 +234,6 @@ const OfflineFirstForm: React.FC = () => {
           {isSyncing ? 'Sincronizando...' : 'Guardar'}
         </button>
       </form>
-        
       <p className="mt-4">
         Estado: <span className={`font-bold ${isOnline ? 'text-green-500' : 'text-red-500'}`}>
           {isOnline ? 'En línea' : 'Fuera de línea'}
