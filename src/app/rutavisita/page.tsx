@@ -1,7 +1,9 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut } from 'lucide-react';
+import { RutaDeVisita } from "../crearruta/page";
+import { setUpDataBase } from "@/lib/indexedDB";
 
 interface RouteButton {
   title: string;
@@ -22,14 +24,28 @@ const allButtons: RouteButton[] = [
 const botones_por_pagina = 5;
 
 export default function RutaVisita() {
+  const [clienteInfo,setClienteInfo] = useState<RutaDeVisita[]>([]);
   const [pagina_actual, setpagina_actual] = useState(1);
 
-  const totalPages = Math.ceil(allButtons.length / botones_por_pagina);
+  const totalPages = Math.ceil(clienteInfo.length / botones_por_pagina);
   const startIndex = (pagina_actual - 1) * botones_por_pagina;
-  const buttonsToShow = allButtons.slice(startIndex, startIndex + botones_por_pagina);
+  const buttonsToShow = clienteInfo.slice(startIndex, startIndex + botones_por_pagina);
 
   const antPag = () => setpagina_actual(prev => Math.max(prev - 1, 1));
   const sigPag = () => setpagina_actual(prev => Math.min(prev + 1, totalPages));
+
+  async function ClienteInfo() {
+      const db = await setUpDataBase();
+      const tx = db.transaction('RutaDeVisita','readonly');
+      const rutas = await tx.store.getAll();
+      setClienteInfo(rutas)
+      tx.done;
+  }
+  useEffect(() => {
+    ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
+  }, []);
+
+
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -60,10 +76,10 @@ export default function RutaVisita() {
           <button
             key={index}
             className="w-full h-auto py-4 flex flex-col items-start text-left border border-gray-300 rounded-lg bg-white hover:bg-gray-100 transition duration-200"
-            onClick={() => alert(`Clicked on ${button.title}`)} // Acciones al hacer clic
+            onClick={() => alert(`Clicked on ${button.nombre}`)} // Acciones al hacer clic
           >
-            <span className="text-lg font-semibold pl-2">{button.title}</span>
-            <span className="text-sm text-gray-600 pl-2">{button.description}</span>
+            <span className="text-lg font-semibold pl-2">{button.nombre}</span>
+            <span className="text-sm text-gray-600 pl-2">{button.orden_visita + ' ' +button.nombre}</span>
           </button>
         ))}
 

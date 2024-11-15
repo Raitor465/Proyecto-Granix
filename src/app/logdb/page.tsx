@@ -141,9 +141,9 @@ const OfflineFirstForm: React.FC = () => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
-    if (sessionStorage.getItem('isLoggedIn') === 'true') {
-      router.push('/crearruta'); // Redirige a CrearRuta
-    }
+    // if (sessionStorage.getItem('isLoggedIn') === 'true') {
+    //   router.push('/crearruta'); // Redirige a CrearRuta
+    // }
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -176,20 +176,20 @@ const OfflineFirstForm: React.FC = () => {
 
     try {
       const vendedor = await login(data.numero,data.clave);
-      console.log(vendedor)
+      //console.log(vendedor)
       if (vendedor){
         alert('Datos guardados correctamente')
-        console.log(data.numero)
+        //console.log(data.numero)
         const { data : rutaVisita, error } = await supabase
         .from('ClienteSucursal')
         .select(`
-          nombre,orden_visita               
-          RutaDeVisita: ruta_visita_id (nombre,ruta_visita_id),
+          nombre,orden_visita,             
+          RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id),
           Direccion(calle,numero)         
         `)
         .eq('ruta_visita_id.numero_vend', data.numero)
-        .not('RutaDeVisita', 'is', null); // Excluye registros donde RutaDeVisita es null
-        
+        .not('RutaDeVisita', 'is', null); // Asegura que RutaDeVisita no sea null
+        console.log(rutaVisita)
         if (rutaVisita && rutaVisita.length > 0) {
           const db = await setUpDataBase();
           const tx = db.transaction('RutaDeVisita', 'readwrite');
@@ -206,7 +206,7 @@ const OfflineFirstForm: React.FC = () => {
         
         
         sessionStorage.setItem('isLoggedIn', 'true');
-        router.push('/crearruta');
+        // router.push('/crearruta');
       }
 
       //await eliminarBaseDeDatosCompleta()
