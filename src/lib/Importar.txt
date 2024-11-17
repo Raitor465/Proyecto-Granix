@@ -2,4 +2,8 @@ import 'leaflet/dist/leaflet.css';
 npm install -D typescript @types/react @types/node
 npm install idb @supabase/supabase-js 
 npm install next@latest react@latest react-dom@latest
-npm install @react-google-maps/api
+
+
+
+
+npm install @react-google-maps/api "Por si se usa google maps"
