@@ -34,7 +34,7 @@ export default function LocationViewerPage() {
 
     try {
       let query = supabase
-        .from('locations')
+        .from('ubicacion')
         .select('*')
         .order('created_at', { ascending: false });
 

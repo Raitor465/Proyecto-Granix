@@ -66,7 +66,7 @@ export default function GeolocalizarPage() {
 
     try {
       const { error: supabaseError } = await supabase
-        .from('locations')
+        .from('ubicacion')
         .insert({
           name: location.name,
           latitude: location.latitude,
