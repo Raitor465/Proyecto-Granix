@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import {setUpDataBase, eliminarBaseDeDatosCompleta} from '../../lib/indexedDB'
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 export interface RutaDeVisita {
     id : number,
@@ -10,31 +11,51 @@ export interface RutaDeVisita {
     nombre : string,
     orden_visita : number,
     Direccion : {calle : string, numero : number}
-    RutaDeVisita : {nombre : string, ruta_visita_id : number}    
+    RutaDeVisita : {nombre : string, ruta_visita_id : number}
+    Frecuencia : {id_frecuencai : number}
 }
+
+const arrayFrecuencias = [
+  {name : "Semanal"},
+  {name : "Quincenal (Primera Semana)"},
+  {name : "Quincenal (Segunda Semana)"},
+  {name : "Cada 21 Días,1° Semana"},
+  {name : "Cada 21 Días,2° Semana"},
+  {name : "Cada 21 Días,3° Semana"},
+  {name : "Cada 28 Días"},
+  {name : "Cada 42 Días"}
+]
 
 
 export const CrearRuta: React.FC = () => {
-
+    const [frecuencias, setFrecuencia] = useState<{ nombre: any }[] | null>(null);
     const [rutaInfo, setRutaInfo] = useState<RutaDeVisita[]>([]); 
     const [sortOrder , setSortOrder] = useState('asc');
     const router = useRouter();
 
     async function RutaVisitaInfo() {
-        const db = await setUpDataBase();
-        const tx = db.transaction('RutaDeVisita','readonly');
-        const rutas = await tx.store.getAll();
-        setRutaInfo(rutas)
-        tx.done;
+        
+    //   const { data, error } = await supabase
+    //   .from('Frecuencia')
+    //   .select('nombre');
+    
+    // if (data) {
+    //   const frecuencias = data.map((item) => ({
+    //     nombre: item.nombre, // Accede al campo 'nombre' de cada objeto en el array
+    //   }));
+    
+    //   setFrecuencia(frecuencias); // Asumiendo que `setFrecuencia` acepta un array
+    
+      const db = await setUpDataBase();
+      const tx = db.transaction('RutaDeVisita','readonly');
+      const rutas = await tx.store.getAll();
+      setRutaInfo(rutas)
+      tx.done;
+    //}
     }
     useEffect(() => {
         RutaVisitaInfo(); // Llama a la función para cargar los datos cuando el componente se monta
     }, []);
-
-
-    // const handleSortOrderChange = (event: React.FormEvent<HTMLFormElement>) => {
-    //     setSortOrder(event.target.value);
-    // }
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -119,7 +140,52 @@ export const CrearRuta: React.FC = () => {
                     <option value="desc">Descendente</option>
                   </select>
                 </div>
+
+                                        {/* Orden */}
+                                        <div>
+                            <select
+                                name="orden"
+                                required
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                                defaultValue=""
+                            >
+                                <option value="" disabled hidden> Orden | Direccion | Nombre</option>
+                            </select>
+                        </div>
+
+                        {/* Nombre */}
+                        <div>
+                            <select
+                                name="nombre"
+                                required
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                                defaultValue=""
+                            >
+                                <option value="" disabled hidden>Ruta de visita 2.0</option>
+                            </select>
+                        </div>
+
+
+
               </div>
+              <div>
+      
+        <div>
+          {arrayFrecuencias.map((frec, index) => (
+            <label key={index} className="flex items-center cursor-default">
+              <input
+                type="checkbox"
+                name="frecuencia"
+                value={frec.name}
+                disabled // Hace que el checkbox sea de solo lectura
+                //checked={ === } // Marca el checkbox si coincide con la seleccionada
+                className="mr-2 appearance-none h-6 w-6 border border-gray-300 rounded-full checked:bg-blue-600 checked:border-transparent focus:outline-none"
+              />
+              {frec.name}
+            </label>
+          ))}
+        </div>
+    </div>
             </div>
             <button
               type="submit"
