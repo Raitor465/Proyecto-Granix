@@ -176,14 +176,14 @@ const OfflineFirstForm: React.FC = () => {
 
     try {
       const vendedor = await login(data.numero,data.clave);
-      //console.log(vendedor)
+      console.log(vendedor)
       if (vendedor){
         alert('Datos guardados correctamente')
         //console.log(data.numero)
         const { data : rutaVisita, error } = await supabase
         .from('ClienteSucursal')
         .select(`
-          nombre,orden_visita,             
+          nombre,orden_visita,CODCL,            
           RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id),
           Direccion(calle,numero)         
         `)
@@ -209,7 +209,7 @@ const OfflineFirstForm: React.FC = () => {
         // router.push('/crearruta');
       }
 
-      //await eliminarBaseDeDatosCompleta()
+      // await eliminarBaseDeDatosCompleta()
     } catch (error) {
       if (error instanceof Error) { 
         alert('Error al guardar los datos: ' + error.message);

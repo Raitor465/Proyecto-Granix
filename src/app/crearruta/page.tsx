@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 export interface RutaDeVisita {
     id : number,
+    CODCL : number,
     nombre : string,
     orden_visita : number,
     Direccion : {calle : string, numero : number}
