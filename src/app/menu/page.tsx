@@ -5,7 +5,6 @@ export default function MenuPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       <div className="grid grid-cols-2 gap-8">
-
         {/* Botón Ruta de visita */}
         <Link href="/rutavisita">
           <div className="flex flex-col items-center cursor-pointer">
@@ -43,8 +42,8 @@ export default function MenuPage() {
             <p>Salir</p>
           </div>
         </Link>
-
       </div>
     </div>
   );
 }
+
