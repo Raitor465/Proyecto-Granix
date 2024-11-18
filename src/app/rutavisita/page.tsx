@@ -1,9 +1,5 @@
 "use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-
 import React, { useEffect } from "react";
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut } from 'lucide-react';
@@ -26,17 +22,6 @@ const allButtons: RouteButton[] = [
   { title: "Punto 6", description: "Descripción del punto 6" },
   { title: "Punto 7", description: "Descripción del punto 7" },
 ];
-
-const opciones = [
-  { name: "Cargar Pedido", img: "/path-to-icons/cargar-pedido.png", link: "/tomarpedido" },
-  { name: "Registrar Precios", img: "/path-to-icons/registrar-precios.png", link: "/registrarprecios" },
-  { name: "Ubicar Cliente", img: "/path-to-icons/ubicar-cliente.png", link: "/ubicar-cliente" },//ACA FALTA HACER LA PAGINA
-  { name: "Solicitud de Pago", img: "/path-to-icons/solicitud-pago.png", link: "/solicitud-pago" },//ACA FALTA HACER LA PAGINA
-  { name: "Deuda Entidad", img: "/path-to-icons/deuda-entidad.png", link: "/deuda-entidad" },//ACA FALTA HACER LA PAGINA
-  { name: "Actualizar Datos", img: "/path-to-icons/actualizar-datos.png", link: "/actualizar-datos" },//ACA FALTA HACER LA PAGINA
-  { name: "Geocalizar", img: "/path-to-icons/geocalizar.png", link: "/geocalizar" },//ACA FALTA HACER LA PAGINA
-];
-
 const botones_por_pagina = 5;
 
 const opciones = [
