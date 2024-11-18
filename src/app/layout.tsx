@@ -23,6 +23,7 @@ export default function Layout({ children }: LayoutProps) {
         </header>
 
         {/* Fondo blanco y texto gris oscuro (#333333) para el contenido principal */}
+
         <main className="p-4 bg-white text-[#333333]">
           {children} {/* Aquí se renderizarán las páginas hijas */}
         </main>

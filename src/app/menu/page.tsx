@@ -5,7 +5,6 @@ export default function MenuPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       <div className="grid grid-cols-2 gap-8">
-        
         {/* Botón Ruta de visita */}
         <Link href="/rutavisita">
           <div className="flex flex-col items-center cursor-pointer">
@@ -14,7 +13,7 @@ export default function MenuPage() {
 
             ACA TIENE QUE IR A RUTA VISITA SI, PERO ES LA PAGINA EN DONDE SE ORGANIZA EL DIA DE VISITA, SU RUTA, EL ORDEN, 
             QUE DESPUES TIENE EL BOTON DESCARGAR RUTA Y RECIEN AHI PASA A LA PAGIAN REAL DE RUTA VISITA.
-            
+
             */}
             <p>Ruta de visita</p>
           </div>
@@ -43,8 +42,8 @@ export default function MenuPage() {
             <p>Salir</p>
           </div>
         </Link>
-        
       </div>
     </div>
   );
 }
+
