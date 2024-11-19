@@ -4,32 +4,18 @@ import React, { useEffect } from "react";
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut } from 'lucide-react';
 import { RutaDeVisita } from "../crearruta/page";
-import { setUpDataBase } from "@/lib/indexedDB";
+import { setUpDataBase } from "@/lib/indexedDB"; 
 import Link from 'next/link';
 
 
-interface RouteButton {
-  title: string;
-  description: string;
-}
-
-const allButtons: RouteButton[] = [
-  { title: "Punto 1", description: "Descripción del punto 1" },
-  { title: "Punto 2", description: "Descripción del punto 2" },
-  { title: "Punto 3", description: "Descripción del punto 3" },
-  { title: "Punto 4", description: "Descripción del punto 4" },
-  { title: "Punto 5", description: "Descripción del punto 5" },
-  { title: "Punto 6", description: "Descripción del punto 6" },
-  { title: "Punto 7", description: "Descripción del punto 7" },
-];
 const botones_por_pagina = 5;
 
 const opciones = [
   { name: "Cargar Pedido", img: "/path-to-icons/cargar-pedido.png", link: "/tomarpedido" },
   { name: "Registrar Precios", img: "/path-to-icons/registrar-precios.png", link: "/registrarprecios" },
   { name: "Ubicar Cliente", img: "/path-to-icons/ubicar-cliente.png", link: "/ubicar-cliente" },//ACA FALTA HACER LA PAGINA
-  { name: "Solicitud de Pago", img: "/path-to-icons/solicitud-pago.png", link: "/solicitud-pago" },//ACA FALTA HACER LA PAGINA
-  { name: "Deuda Entidad", img: "/path-to-icons/deuda-entidad.png", link: "/deuda-entidad" },//ACA FALTA HACER LA PAGINA
+  { name: "Solicitud de Pago", img: "/path-to-icons/solicitud-pago.png", link: "/solicitudpago" },//ACA FALTA HACER LA PAGINA
+  { name: "Deuda Entidad", img: "/path-to-icons/deuda-entidad.png", link: "/deuda" },//ACA FALTA HACER LA PAGINA
   { name: "Actualizar Datos", img: "/path-to-icons/actualizar-datos.png", link: "/actualizar-datos" },//ACA FALTA HACER LA PAGINA
   { name: "Geocalizar", img: "/path-to-icons/geocalizar.png", link: "/geocalizar" },//ACA FALTA HACER LA PAGINA
 ];
@@ -46,15 +32,28 @@ export default function RutaVisita() {
 
   const antPag = () => setpagina_actual(prev => Math.max(prev - 1, 1));
   const sigPag = () => setpagina_actual(prev => Math.min(prev + 1, totalPages));
-  const abrirModal = () => setMostrarModal(true);
+  async function abrirModal(cliente: RutaDeVisita) {
+    try{
+      const db = await setUpDataBase();
+      const tx = db.transaction('ClienteSucursal', 'readwrite');
+      const store = tx.objectStore('ClienteSucursal');
+      await store.clear();
+      await store.add(cliente);
+      await tx.done;
+    } catch (error){
+      console.error('Error al abrir el modal',error)
+    }
+    setMostrarModal(true); // Muestra el modal
+  };
   const cerrarModal = () => setMostrarModal(false);
 
 
   async function ClienteInfo() {
       const db = await setUpDataBase();
       const tx = db.transaction('RutaDeVisita','readonly');
-      const rutas = await tx.store.getAll();
-      setClienteInfo(rutas)
+      const clientes = await tx.store.getAll();
+      // console.log(clientes)
+      setClienteInfo(clientes)
       tx.done;
   }
   useEffect(() => {
@@ -94,7 +93,7 @@ export default function RutaVisita() {
           <button
             key={index}
             className="w-full h-auto py-4 flex flex-col items-start text-left border border-gray-300 rounded-lg bg-white hover:bg-gray-100 transition duration-200"
-            onClick={abrirModal}          
+            onClick={() => abrirModal(button)} // Pasa CODCL al modal       
             >
             <span className="text-lg font-semibold pl-2">{'[' + button.orden_visita+ ']' + ' ' + button.nombre}</span>
             <span className="text-sm text-gray-600 pl-2">{button.Direccion.calle + '' + button.Direccion.numero +' (' + button.CODCL + ')'  }</span>
@@ -130,7 +129,7 @@ export default function RutaVisita() {
           </div>
         </div>
       )}
-      {/* <footer className="p-4 bg-muted">
+      <footer className="p-4 bg-muted">
         <div className="grid grid-cols-3 gap-4">
           <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
             <Menu className="mr-4 h-6 w-6" />
@@ -145,7 +144,7 @@ export default function RutaVisita() {
             <span className="pl-2">Salir</span>
           </button>
         </div>
-      </footer> */}
+      </footer>
 
     </div>
   );

@@ -1,9 +1,12 @@
 // src/app/deuda/page.tsx
 "use client"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { RutaDeVisita } from "../crearruta/page";
+import { setUpDataBase } from "@/lib/indexedDB"; 
+
 
 // Definimos el tipo para los datos de deuda
-type Deuda = {
+export type Deuda = {
   tipo: string
   operacion: number
   importe: number
@@ -15,12 +18,24 @@ type Deuda = {
 // Componente principal
 export default function Component() {
   // Datos de ejemplo (normalmente vendrían de una API o base de datos)
-  const [deudas] = useState<Deuda[]>([
+  const[deudas, setDeudas] = useState<Deuda[]>([])
+/*   const [deudas] = useState<Deuda[]>([
     { tipo: "Factura", operacion: 1001, importe: 1500.00, fechaVencimiento: "2023-07-15", filial: 1, vendedor: 101 },
     { tipo: "Factura", operacion: 1002, importe: 2300.50, fechaVencimiento: "2023-07-20", filial: 2, vendedor: 102 },
     { tipo: "Factura", operacion: 1003, importe: 800.75, fechaVencimiento: "2023-07-25", filial: 1, vendedor: 103 },
   ])
-
+ */
+  async function ClienteInfo() {
+    const db = await setUpDataBase();
+    const tx = db.transaction('ClienteSucursal','readonly');
+    const clientes = await tx.store.getAll() as RutaDeVisita[];
+    const deudasCliente = clientes[0].deudas;
+    setDeudas(deudasCliente)
+    tx.done;
+}
+useEffect(() => {
+  ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
+}, []);
   // Calcular el total de la deuda
   const totalDeuda = deudas.reduce((total, deuda) => total + deuda.importe, 0)
 

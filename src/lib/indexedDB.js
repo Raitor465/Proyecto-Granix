@@ -53,6 +53,8 @@ export async function setUpDataBase() {
             // database.createObjectStore('Categoria', { keyPath: 'categoria_id' });
             // database.createObjectStore('Bonificacion', { keyPath: 'bonificacion_id' });
             // database.createObjectStore('ListaArticulos', { keyPath: 'lista_articulos_id' });
+            // database.createObjectStore('Deuda', { keyPath: 'deuda_id', autoIncrement: true });
+            // deudaStore.createIndex('clienteID', 'clienteID', { unique: false });
             console.log('Base de datos creada o abierta exitosamente.');
          },
         })
@@ -98,4 +100,3 @@ export async function deleteRecord(storeName, key) {
     await tx.done;
     console.log(`Registro eliminado de ${storeName}:`, key);
   }
-

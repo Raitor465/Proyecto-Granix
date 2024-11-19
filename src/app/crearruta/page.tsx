@@ -13,6 +13,14 @@ export interface RutaDeVisita {
     Direccion : {calle : string, numero : number}
     RutaDeVisita : {nombre : string, ruta_visita_id : number}
     Frecuencia : {id_frecuencai : number}
+    deudas: {
+      tipo: string;
+      operacion: number;
+      importe: number;
+      fechaVencimiento: string;
+      filial: number;
+      vendedor: number;
+    }[];
 }
 
 const arrayFrecuencias = [

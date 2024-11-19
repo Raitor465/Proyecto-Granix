@@ -90,9 +90,6 @@ const login = async(numero : any , clave : any) => {
       .eq('clave',clave)
       .single();
 
-      //console.log('Número:', numero);
-      //console.log('Clave:', clave);
-      //console.log(vendedor)
 
       if (error) throw error;
       if (vendedorbext){
@@ -134,10 +131,6 @@ const OfflineFirstForm: React.FC = () => {
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
-
-  
-
-  
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
@@ -176,7 +169,7 @@ const OfflineFirstForm: React.FC = () => {
 
     try {
       const vendedor = await login(data.numero,data.clave);
-      console.log(vendedor)
+      // console.log(vendedor)
       if (vendedor){
         alert('Datos guardados correctamente')
         //console.log(data.numero)
@@ -185,22 +178,44 @@ const OfflineFirstForm: React.FC = () => {
         .select(`
           nombre,orden_visita,CODCL,            
           RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id),
-          Direccion(calle,numero),
-          Frecuencia(id_frecuencia)         
+          Direccion(calle,numero)
         `)
         .eq('ruta_visita_id.numero_vend', data.numero)
-        .not('RutaDeVisita', 'is', null); // Asegura que RutaDeVisita no sea null
-        console.log(rutaVisita)
-        if (rutaVisita && rutaVisita.length > 0) {
-          const db = await setUpDataBase();
-          const tx = db.transaction('RutaDeVisita', 'readwrite');
+        .not('RutaDeVisita', 'is', null) // Asegura que RutaDeVisita no sea null
+        // .eq('Deudas.cliente', 'ClienteSucursal.CODCL'); // Relaciona las deudas con el cliente usando CODCL
+        if (error) throw new Error(error.message);
+    
+        // Preparar todas las deudas antes de la transacción
+        const clientesConDeudas = [];
         
-          for (const ruta of rutaVisita){
-            await tx.store.put(ruta);
-          }
-          await tx.done;
-        }
+        for (const cliente of rutaVisita) {
+          const { data: deudas, error: deudasError } = await supabase
+            .from('Deudas')
+            .select(`*`)
+            .eq('cliente', cliente.CODCL);
+    
+          if (deudasError) throw new Error(deudasError.message);
+/*           console.log(cliente.CODCL);
+          console.log(deudas); */
+          // Agregar las deudas al cliente para almacenar en IndexedDB después
+          clientesConDeudas.push({ ...cliente, deudas });
 
+        }
+    
+        // Abre la base de datos y comienza la transacción después de obtener todos los datos
+        const db = await setUpDataBase();
+        const tx = db.transaction('RutaDeVisita', 'readwrite');
+    
+        // Guardar cada cliente y sus deudas en IndexedDB
+        for (const cliente of clientesConDeudas) {
+          // Guardar cliente en la store 'RutaDeVisita'
+          await tx.objectStore('RutaDeVisita').put(cliente);
+    
+          
+        }
+    
+        await tx.done; // Esperar a que se complete la transacción
+    
 
         setFormData({numero : '', clave: ''});
         //setIsLoggedIn(true)
