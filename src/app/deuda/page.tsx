@@ -17,7 +17,6 @@ export type Deuda = {
 
 // Componente principal
 export default function Component() {
-  // Datos de ejemplo (normalmente vendrían de una API o base de datos)
   const[deudas, setDeudas] = useState<Deuda[]>([])
 /*   const [deudas] = useState<Deuda[]>([
     { tipo: "Factura", operacion: 1001, importe: 1500.00, fechaVencimiento: "2023-07-15", filial: 1, vendedor: 101 },

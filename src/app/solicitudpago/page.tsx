@@ -6,19 +6,19 @@ import { Deuda } from "../deuda/page";
 import { RutaDeVisita } from "../crearruta/page";
 import { setUpDataBase } from "@/lib/indexedDB"; 
 
-type Factura = {
+/* type Factura = {
   id: number
   numero: string
   importe: number
   fechaVencimiento: string
-}
+} */
 
 export default function SolicitudPago() {
-  const [facturas] = useState<Factura[]>([
+  /* const [facturas] = useState<Factura[]>([
     { id: 1, numero: "F001", importe: 1500.00, fechaVencimiento: "2023-07-15" },
     { id: 2, numero: "F002", importe: 2300.50, fechaVencimiento: "2023-07-20" },
     { id: 3, numero: "F003", importe: 800.75, fechaVencimiento: "2023-07-25" },
-  ])
+  ]) */
   const[deudas, setDeudas] = useState<Deuda[]>([])
   async function ClienteInfo() {
     const db = await setUpDataBase();
