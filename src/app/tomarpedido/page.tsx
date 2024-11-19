@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { Data } from '@react-google-maps/api';
 
 
 /*
@@ -32,6 +33,10 @@ interface Precio {
     Precios: Precio;
   }
 
+  interface Bonificacion {
+    BG_porc: number;  // Aquí definimos que BG_porc debe ser un número
+  }
+  
 
   export default function TomarPedido() {
     // Definición del estado para el cliente seleccionado
@@ -39,28 +44,37 @@ interface Precio {
   
     // Estado para almacenar los artículos recuperados de la base de datos
     const [articulos, setArticulos] = useState<Articulo[]>([]);
-  
+    // const [bonificaciones, setBonificaciones] = useState<ClienteBonificacion>();
     // Estado para manejar la búsqueda de artículos en el input
     const [busqueda, setBusqueda] = useState("");
   
     // Estado para manejar el artículo actualmente seleccionado
     const [articuloSeleccionado, setArticuloSeleccionado] = useState<Articulo | null>(null);
+    const [bonificacionGeneral, setBonificacionGeneral] = useState<number>(0);  // Corregido tipo a número
+    const [carrito, setCarrito] = useState <{ articulo: Articulo; cantidad: number; subtotal: number }[]>([]);
+    const [cantidad, setCantidad] = useState<number | "">("");
   
 
 
 
     // useEffect para recuperar el cliente seleccionado de localStorage y realizar la consulta de artículos con precios
     useEffect(() => {
-      // Recupera el cliente seleccionado de localStorage (si existe)
-      const CODCL = localStorage.getItem("clienteSeleccionado");
-      setClienteSeleccionado(CODCL);
-  
-      // Llama a la función que consulta los artículos con sus precios
-      fetchArticulosConPrecios();
-    }, []); // Se ejecuta una sola vez cuando el componente se monta
+        // Recupera el cliente seleccionado de localStorage (si existe)
+        const CODCL = localStorage.getItem("clienteSeleccionado");
+      
+        if (CODCL) {
+          setClienteSeleccionado(CODCL); // Establece el cliente seleccionado
+      
+          // Llama a la función que consulta los artículos con sus precios
+          fetchArticulosConPrecios();
+      
+          // Llama a la función para obtener las bonificaciones con el cliente seleccionado
+          fetchBonificaciones(Number(CODCL)); // Usamos Number(CODCL) para asegurarnos que sea un número
+        }
+      }, []); // Se ejecuta una sola vez cuando el componente se monta
   
 
-
+    //Fetch de artículos con precios----------------------------------------------
 
     // Función para recuperar los artículos con sus precios desde la base de datos (Supabase)
     const fetchArticulosConPrecios = async () => {
@@ -76,8 +90,42 @@ interface Precio {
       // Tipamos los datos recibidos explícitamente como un array de Articulo
       setArticulos(data as Articulo[]);
     };
+
+    //Fetch de Bonificaciones-----------------------------------------------------
+    const fetchBonificaciones = async (clienteSucursalId: number) => {
+        try {
+          // Aquí se hace la consulta filtrando por CODCA_client, que es la clave foránea
+          const { data, error } = await supabase
+            .from("ClienteSucursal")
+            .select(`Bonificaciones(BG_porc)`)  // Aseguramos que traemos la relación Bonificaciones
+            .eq('CODCL', clienteSucursalId); // Usamos CODCA_client como la clave foránea para filtrar
+            //console.log(data,clienteSucursalId);       
+            //console.log((data?.[0].Bonificaciones?.[0].BG_porc) as number); // Accedemos a la bonificación general
+            setBonificacionGeneral((data?.[0].Bonificaciones?.BG_porc) as number); // Accedemos a la bonificación general
+
+
+
+
+            if (error) {
+            console.error("Error al traer bonificaciones:", error);
+            //setBonificacionGeneral(0); // Manejo de error
+            return;
+          }
+          
+          //setBonificacionGeneral(bonificacion);
+      
+        //   console.log("Bonificación general:", bonificacion);
+        } catch (err) {
+          console.error("Error inesperado al traer bonificaciones:", err);
+          setBonificacionGeneral(0);
+        }
+      };
+          
   
     // FUNCIONES --------------------------------------------------------------
+
+
+    // Funciones para articulos con precios-------------------------------------
 
     // Función para manejar el cambio en el campo de búsqueda de artículos
     const handleBusqueda = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,7 +138,7 @@ interface Precio {
         setArticuloSeleccionado(articulo); // Establece el artículo seleccionado
     
         // Agregar log para verificar los datos
-        console.log(articulo.Precios); // Esto debería mostrar el arreglo de Precios
+        //console.log(articulo.Precios);
         
         // Verifica si el arreglo de Precios tiene al menos un elemento
         const precio = articulo.Precios && articulo.Precios.artic_pr > 0
@@ -105,6 +153,40 @@ interface Precio {
     const articulosFiltrados = articulos.filter((articulo) =>
       articulo.nombre.toLowerCase().includes(busqueda.toLowerCase())
     );
+
+    //--------------------------------------------------------------------------------
+    // Funciones para Bonificaciones
+
+
+
+
+    //Funciones para sumar los totales----------------------------------------------
+
+    const handleAgregarArticulo = (cantidad: number) => {
+        if (!articuloSeleccionado || cantidad <= 0) return;
+        const precio = articuloSeleccionado.Precios.prec_bult;
+        const subtotal = precio * cantidad;
+    
+        setCarrito((prev) => [
+          ...prev,
+          { articulo: articuloSeleccionado, cantidad, subtotal },
+        ]);
+    
+        setBusqueda("");
+        setArticuloSeleccionado(null);
+      };
+    
+    const calcularTotal = () => {
+        const subtotal = carrito.reduce((acc, item) => acc + item.subtotal, 0);
+        const descuento = (subtotal * bonificacionGeneral) / 100;
+        //console.log(descuento);
+        return { subtotal, descuento, total: subtotal - descuento };
+      };
+    
+    const { subtotal, descuento, total } = calcularTotal();
+
+
+
   
     // Función para manejar la navegación a otra página (ruta de visita)
     const handleNavigation = () => {
@@ -152,20 +234,23 @@ interface Precio {
           )}
         </div>
         <div>
-          <label className="block text-gray-700 font-medium">Bultos</label>
+          <label className="block text-gray-700 font-medium">Cantidad</label>
           <input
             type="number"
             className="w-full border border-gray-300 rounded p-2 mt-1"
             placeholder="Ingrese cantidad"
-          />
+            value={cantidad}
+            onChange={(e) => setCantidad(Number(e.target.value) || "")}
+            />
         </div>
         <div>
-          <label className="block text-gray-700 font-medium">Bon. General</label>
-          <input
+        <label className="block text-gray-700 font-medium">Bon. General (%)</label>
+        <input
             type="text"
             className="w-full border border-gray-300 rounded p-2 mt-1"
-            placeholder="Ingrese bonificación"
-          />
+            value={bonificacionGeneral}
+            
+            />
         </div>
         <div>
           <label className="block text-gray-700 font-medium">Sin disconformidad</label>
@@ -199,8 +284,11 @@ interface Precio {
             placeholder="Ingrese comentario"
           />
         </div>
-        <button className="bg-black text-white px-6 py-2 rounded-lg font-bold">
-          Agregar
+        <button
+            className="bg-black text-white px-6 py-2 rounded-lg font-bold"
+            onClick={() => handleAgregarArticulo(Number(cantidad) || 0)} // Aquí conviertes la cantidad actual a número
+            >
+                Agregar
         </button>
 
       </div>
@@ -218,23 +306,38 @@ interface Precio {
             </tr>
           </thead>
           <tbody>
-            {/* Filas vacías */}
-            <tr>
-              <td className="border border-gray-300 p-2"></td>
-              <td className="border border-gray-300 p-2"></td>
-              <td className="border border-gray-300 p-2"></td>
-              <td className="border border-gray-300 p-2"></td>
-              <td className="border border-gray-300 p-2"></td>
-            </tr>
-            {/* Fila total */}
-            <tr className="bg-blue-100">
-              <td className="border border-gray-300 p-2 font-bold">Total:</td>
-              <td className="border border-gray-300 p-2"></td>
-              <td className="border border-gray-300 p-2"></td>
-              <td className="border border-gray-300 p-2"></td>
-              <td className="border border-gray-300 p-2"></td>
-            </tr>
+            {carrito.map((item, index) => (
+              <tr key={index}>
+                <td className="border border-gray-300 p-2">
+                  {item.articulo.nombre}
+                </td>
+                <td className="border border-gray-300 p-2">{item.cantidad}</td>
+                <td className="border border-gray-300 p-2">
+                  ${item.subtotal.toFixed(2)}
+                </td>
+              </tr>
+            ))}
           </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan={2} className="font-bold text-right pr-4">
+                Subtotal:
+              </td>
+              <td>${subtotal.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td colSpan={2} className="font-bold text-right pr-4">
+                Descuento ({bonificacionGeneral}%):
+              </td>
+              <td>${descuento.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td colSpan={2} className="font-bold text-right pr-4">
+                Total:
+              </td>
+              <td>${total.toFixed(2)}</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
 
