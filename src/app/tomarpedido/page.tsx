@@ -17,6 +17,9 @@ interface Precio {
     abrev: string;
     CODIM_art: number;
     Precios: Precio;
+    Ivas?: {
+      porc: number; // El porcentaje de IVA asociado
+    };
   }
 
   interface Bonificacion {
@@ -37,7 +40,13 @@ interface Precio {
     // Estado para manejar el artículo actualmente seleccionado
     const [articuloSeleccionado, setArticuloSeleccionado] = useState<Articulo | null>(null);
     const [bonificacionGeneral, setBonificacionGeneral] = useState<number>(0);  // Corregido tipo a número
-    const [carrito, setCarrito] = useState <{ articulo: Articulo; cantidad: number; subtotal: number }[]>([]);
+    const [carrito, setCarrito] = useState<{
+      articulo: Articulo;
+      cantidad: number;
+      subtotal: number;
+      iva: number;
+      total: number;
+    }[]>([]);
     const [cantidad, setCantidad] = useState<number | "">("");
     const [bonificacionItem, setBonificacionItem] = useState<number | "">(""); // Nuevo estado para la bonificación específica del artículo
   
@@ -63,12 +72,12 @@ interface Precio {
 
     //Fetch de artículos con precios----------------------------------------------
 
-    // Función para recuperar los artículos con sus precios desde la base de datos (Supabase)
+    // Función para recuperar los artículos con sus precios desde la base de datos (Supabase) y agregro traer los ivas
     const fetchArticulosConPrecios = async () => {
       const { data, error } = await supabase
         .from("Articulos") // Consultamos la tabla "Articulos"
-        .select(`* , Precios(*)`); // Seleccionamos todos los campos de "Articulos" y los precios relacionados en la tabla "Precios"
-        //console.log(data);
+        .select(`* , Precios(*), Ivas(porc)`); // Seleccionamos todos los campos de "Articulos" y los precios relacionados en la tabla "Precios"
+        console.log(data);
       if (error) {
         console.error("Error al traer artículos:", error); // Si ocurre un error en la consulta, lo mostramos en la consola
         return;
@@ -148,28 +157,39 @@ interface Precio {
     
       const precio = articuloSeleccionado.Precios.prec_bult;
     
-      // Calcular el descuento si existe
+      // Obtén el porcentaje de IVA desde la relación Ivas
+      const porcIVA = articuloSeleccionado.Ivas?.porc || 0;
+    
+      // Calcula el descuento específico del artículo
       const descuentoItem =
-        bonificacionItem && Number(bonificacionItem) > 0
-          ? (precio * cantidad * Number(bonificacionItem)) / 100
+        bonificacionItem && bonificacionItem > 0
+          ? (precio * cantidad * bonificacionItem) / 100
           : 0;
     
-      const subtotal = precio * cantidad - descuentoItem;
+      // Calcula el subtotal sin IVA
+      const subtotalSinIVA = precio * cantidad - descuentoItem;
     
-      // Actualizar el carrito con la bonificación específica
+      // Calcula el IVA
+      const iva = (subtotalSinIVA * porcIVA) / 100;
+    
+      // Calcula el subtotal final con IVA
+      const subtotalConIVA = subtotalSinIVA + iva;
+    
+      // Actualiza el carrito
       setCarrito((prev) => [
         ...prev,
         {
           articulo: articuloSeleccionado,
           cantidad,
-          subtotal,
-          bonificacionItem: Number(bonificacionItem) || 0, // Guardar la bonificación específica del artículo
+          subtotal: subtotalSinIVA,
+          iva,
+          total: subtotalConIVA,
         },
       ]);
     
       setBusqueda("");
       setArticuloSeleccionado(null);
-      setBonificacionItem(""); // Limpiar la bonificación específica
+      setBonificacionItem(""); // Limpiar bonificación específica
     };
     
     const calcularTotal = () => {
@@ -180,6 +200,7 @@ interface Precio {
     };
     
     const { subtotal, descuento, total } = calcularTotal();
+    
 
 
 
@@ -304,18 +325,24 @@ interface Precio {
             </tr>
           </thead>
           <tbody>
-            {carrito.map((item, index) => (
-              <tr key={index}>
-                <td className="border border-gray-300 p-2">
-                  {item.articulo.nombre}
-                </td>
-                <td className="border border-gray-300 p-2">{item.cantidad}</td>
-                <td className="border border-gray-300 p-2">
-                  ${item.subtotal.toFixed(2)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
+          {carrito.map((item, index) => (
+            <tr key={index}>
+              <td className="border border-gray-300 p-2">
+                {item.articulo.nombre}
+              </td>
+              <td className="border border-gray-300 p-2">{item.cantidad}</td>
+              <td className="border border-gray-300 p-2">
+                ${item.subtotal.toFixed(2)}
+              </td>
+              <td className="border border-gray-300 p-2">
+                ${item.iva.toFixed(2)}
+              </td>
+              <td className="border border-gray-300 p-2">
+                ${item.total.toFixed(2)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
           <tfoot>
             <tr>
               <td colSpan={2} className="font-bold text-right pr-4">
