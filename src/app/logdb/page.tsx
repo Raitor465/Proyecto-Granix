@@ -173,35 +173,100 @@ const OfflineFirstForm: React.FC = () => {
       if (vendedor){
         alert('Datos guardados correctamente')
         //console.log(data.numero)
-        const { data : rutaVisita, error } = await supabase
+        const { data : rutaVisita , error } = await supabase
         .from('ClienteSucursal')
         .select(`
           nombre,orden_visita,CODCL,            
           RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id),
-          Direccion(calle,numero)
+          Direccion(calle,numero),
+          lista
         `)
         .eq('ruta_visita_id.numero_vend', data.numero)
         .not('RutaDeVisita', 'is', null) // Asegura que RutaDeVisita no sea null
         // .eq('Deudas.cliente', 'ClienteSucursal.CODCL'); // Relaciona las deudas con el cliente usando CODCL
         if (error) throw new Error(error.message);
-    
+        // console.log(rutaVisita);
         // Preparar todas las deudas antes de la transacción
         const clientesConDeudas = [];
-        
+        const listas: number[] = [];
         for (const cliente of rutaVisita) {
+          if(cliente.lista && !listas.includes(cliente.lista)) listas.push(cliente.lista);
+          //En esta parte quiero poner las listas que todavia no estan en la lista Listas
           const { data: deudas, error: deudasError } = await supabase
             .from('Deudas')
             .select(`*`)
             .eq('cliente', cliente.CODCL);
     
           if (deudasError) throw new Error(deudasError.message);
-/*           console.log(cliente.CODCL);
-          console.log(deudas); */
+
           // Agregar las deudas al cliente para almacenar en IndexedDB después
           clientesConDeudas.push({ ...cliente, deudas });
 
         }
-    
+        try {
+          // Primero, consultar las listas de artículos desde Supabase, filtradas por los números de lista presentes en 'listas'
+          if (listas.length > 0) {
+            const { data: listaArticulos, error: listaArticulosError } = await supabase
+              .from('ListaArticulos')
+              .select('nro_lista, nro_articulo')  // Solo nro_lista y nro_articulo
+              .in('nro_lista', listas);  // Filtrar por nro_lista que está en 'listas'
+        
+            if (listaArticulosError) {
+              throw new Error(`Error al obtener lista de artículos: ${listaArticulosError.message}`);
+            }
+        
+            // Ahora, obtener el nombre de la lista para cada 'nro_lista' y su lista de artículos
+            const listasConArticulos = [];
+        
+            for (const lista of listas) {
+              // Filtrar artículos por nro_lista
+              const articulos = listaArticulos.filter(item => item.nro_lista === lista);
+        
+              // Obtener el nombre de la lista (suponiendo que tienes alguna manera de obtener el nombre)
+              const { data: nombreListaData, error: nombreListaError } = await supabase
+                .from('Lista')
+                .select('nombre')
+                .eq('id', lista)  // Filtrar por el nro_lista
+                .single();  // Solo esperamos un único resultado, ya que cada lista tiene un solo nombre
+        
+              if (nombreListaError) {
+                throw new Error(`Error al obtener el nombre de la lista ${lista}: ${nombreListaError.message}`);
+              }
+        
+              // Crear un objeto para almacenar la lista con su nombre y los artículos
+              listasConArticulos.push({
+                nro_lista: lista,
+                nombre: nombreListaData.nombre,
+                articulos: articulos
+              });
+            }
+            console.log(listasConArticulos)
+        
+            // Abre la base de datos de IndexedDB
+            const db = await setUpDataBase();  // Asegúrate de que 'setUpDataBase' esté bien configurada
+        
+            // Inicia una transacción para guardar las listas en la store 'Listas'
+            const tx = db.transaction('ListaArticulos', 'readwrite');  // Usamos 'Listas' como store para las listas
+        
+            // Guardar cada lista con los artículos en IndexedDB
+            for (const listaData of listasConArticulos) {
+              // Guardar en IndexedDB con la estructura correspondiente
+              await tx.objectStore('ListaArticulos').put(listaData);
+            }
+        
+            // Esperar a que la transacción se complete
+            await tx.done;
+        
+            console.log("Listas guardadas en IndexedDB:", listasConArticulos);
+          } else {
+            console.log("No hay listas disponibles para consultar.");
+          }
+        
+        } catch (error) {
+          console.error("Error al guardar listas en IndexedDB:", error);
+        }
+        
+        // console.log(listas)
         // Abre la base de datos y comienza la transacción después de obtener todos los datos
         const db = await setUpDataBase();
         const tx = db.transaction('RutaDeVisita', 'readwrite');
@@ -210,8 +275,6 @@ const OfflineFirstForm: React.FC = () => {
         for (const cliente of clientesConDeudas) {
           // Guardar cliente en la store 'RutaDeVisita'
           await tx.objectStore('RutaDeVisita').put(cliente);
-    
-          
         }
     
         await tx.done; // Esperar a que se complete la transacción

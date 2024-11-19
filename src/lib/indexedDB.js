@@ -15,6 +15,7 @@ export async function eliminarBaseDeDatosCompleta() {
 }
 
 export async function setUpDataBase() {
+  // eliminarBaseDeDatosCompleta();
     if (!db){
         db = await openDB(dbName,dbVersion, {
             upgrade(database) {
@@ -54,6 +55,7 @@ export async function setUpDataBase() {
             // database.createObjectStore('Bonificacion', { keyPath: 'bonificacion_id' });
             // database.createObjectStore('ListaArticulos', { keyPath: 'lista_articulos_id' });
             // database.createObjectStore('Deuda', { keyPath: 'deuda_id', autoIncrement: true });
+            database.createObjectStore('ListaArticulos', { keyPath: 'lista_id', autoIncrement: true });
             // deudaStore.createIndex('clienteID', 'clienteID', { unique: false });
             console.log('Base de datos creada o abierta exitosamente.');
          },
