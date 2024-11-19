@@ -1,7 +1,7 @@
 // src/app/deuda/page.tsx
 "use client"
 import { useState, useEffect } from 'react'
-import { RutaDeVisita } from "../crearruta/page";
+import { Cliente } from "../crearruta/page";
 import { setUpDataBase } from "@/lib/indexedDB"; 
 
 
@@ -27,7 +27,7 @@ export default function Component() {
   async function ClienteInfo() {
     const db = await setUpDataBase();
     const tx = db.transaction('ClienteSucursal','readonly');
-    const clientes = await tx.store.getAll() as RutaDeVisita[];
+    const clientes = await tx.store.getAll() as Cliente[];
     const deudasCliente = clientes[0].deudas;
     setDeudas(deudasCliente)
     tx.done;

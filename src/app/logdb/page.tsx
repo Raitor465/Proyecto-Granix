@@ -1,35 +1,35 @@
-'use client';
+"use client"
 
 import React, { useState, useEffect, ChangeEvent } from 'react';
-import {setUpDataBase, eliminarBaseDeDatosCompleta} from '../../lib/indexedDB'
+import { setUpDataBase, eliminarBaseDeDatosCompleta } from '../../lib/indexedDB'
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useVendedor } from '@/lib/vendedorContext';
 
 
-async function MirarVendedores(){
+async function MirarVendedores() {
   const db = await setUpDataBase();
-  const tx = db.transaction('Vendedor','readonly');
+  const tx = db.transaction('Vendedor', 'readonly');
   // console.log(tx.store) 
   const vendedores = await tx.store.getAll(); // Obtiene todos los vendedores
   // console.log(vendedores)
-  tx.done;             
+  tx.done;
 
   // Para eliminar el primer id del vendedor
   // const tx = db.transaction('Vendedor','readwrite');
   //await tx.store.delete(1)
 }
 
-export async function guardarVendedorLocal(vendedor: any){
-  try{
+export async function guardarVendedorLocal(vendedor: any) {
+  try {
     const db = await setUpDataBase();
-    const tx = db.transaction('Vendedor','readwrite');
+    const tx = db.transaction('Vendedor', 'readwrite');
     await tx.store.put(vendedor);
     await tx.done
 
     console.log('Vendedor guardado localmente');
-  }catch(error){
-    console.error('Error al guardar el vendedor',error)
+  } catch (error) {
+    console.error('Error al guardar el vendedor', error)
   }
 }
 
@@ -38,13 +38,13 @@ const TestConnectionButton = () => {
 
   const testConnection = async () => {
     if (isTesting) return;
-    
+
     setIsTesting(true);
     try {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('id',37)
+        .eq('id', 37)
         .limit(10);
       console.log(data)
       if (error) {
@@ -54,8 +54,8 @@ const TestConnectionButton = () => {
         console.log('Conexión exitosa');
         alert('Conexión exitosa con Supabase!');
       }
-    } catch (err ) {
-      if ( err instanceof Error){
+    } catch (err) {
+      if (err instanceof Error) {
         alert('Error: ' + err.message);
       }
       console.error('Error:', err);
@@ -65,7 +65,7 @@ const TestConnectionButton = () => {
   };
 
   return (
-    <button 
+    <button
       onClick={testConnection}
       disabled={isTesting}
       className="mt-4 bg-green-500 text-white p-2 rounded hover:bg-green-600 disabled:bg-gray-400"
@@ -75,31 +75,31 @@ const TestConnectionButton = () => {
   );
 };
 
-interface Vendedor{
-  numero : number,
-  clave : string
+interface Vendedor {
+  numero: number,
+  clave: string
 }
 
 
-const login = async(numero : any , clave : any) => {
+const login = async (numero: any, clave: any) => {
   try {
-      const {data: vendedorbext , error} = await supabase
+    const { data: vendedorbext, error } = await supabase
       .from('vendedores')
       .select('*')
-      .eq('numero',numero)
-      .eq('clave',clave)
+      .eq('numero', numero)
+      .eq('clave', clave)
       .single();
 
 
-      if (error) throw error;
-      if (vendedorbext){
-          const vendedorl = {
-            numero: vendedorbext.numero,
-            sincronizado: true,
-            clave: vendedorbext.clave,
-          }
-          // setVendedorId(vendedorbext.numero)
-          //setVendedor(vendedorbext.numero);
+    if (error) throw error;
+    if (vendedorbext) {
+      const vendedorl = {
+        numero: vendedorbext.numero,
+        sincronizado: true,
+        clave: vendedorbext.clave,
+      }
+      // setVendedorId(vendedorbext.numero)
+      //setVendedor(vendedorbext.numero);
 
       //setVendedorId(vendedorbext.numero); // Cambia esto a vendedorId si es necesario
 
@@ -107,10 +107,10 @@ const login = async(numero : any , clave : any) => {
 
       return vendedorbext;
     }
-  }catch(error){
+  } catch (error) {
     console.error('Error durante el login', error);
     alert('Ocurrió un erorr al iniciar sesión');
-    
+
   }
 
 }
@@ -147,7 +147,7 @@ const OfflineFirstForm: React.FC = () => {
     };
   }, [router]);
 
-  const handleInputChange = (e : ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -155,34 +155,38 @@ const OfflineFirstForm: React.FC = () => {
     }));
   };
 
-  const saveData = async (e : React.FormEvent) => {
+  const saveData = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // const now = new Date().toISOString();
-    const data = { 
+    const data = {
       numero: Number(formData.numero), // Asegúrate de que sea un número
-      clave : formData.clave,
+      clave: formData.clave,
       // email: formData.email,
       //created_at: now,
       //sincronizado: false
     };
 
     try {
-      const vendedor = await login(data.numero,data.clave);
+      const vendedor = await login(data.numero, data.clave);
       // console.log(vendedor)
-      if (vendedor){
+      if (vendedor) {
         alert('Datos guardados correctamente')
         //console.log(data.numero)
-        const { data : rutaVisita , error } = await supabase
-        .from('ClienteSucursal')
-        .select(`
+        const { data: rutaVisita, error } = await supabase
+          .from('ClienteSucursal')
+          .select(`
           nombre,orden_visita,CODCL,            
           RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id),
           Direccion(calle,numero),
-          lista
+          lista, 
+          email, 
+          notas, 
+          telefono, 
+          entrega_observaciones
         `)
-        .eq('ruta_visita_id.numero_vend', data.numero)
-        .not('RutaDeVisita', 'is', null) // Asegura que RutaDeVisita no sea null
+          .eq('ruta_visita_id.numero_vend', data.numero)
+          .not('RutaDeVisita', 'is', null) // Asegura que RutaDeVisita no sea null
         // .eq('Deudas.cliente', 'ClienteSucursal.CODCL'); // Relaciona las deudas con el cliente usando CODCL
         if (error) throw new Error(error.message);
         // console.log(rutaVisita);
@@ -190,13 +194,13 @@ const OfflineFirstForm: React.FC = () => {
         const clientesConDeudas = [];
         const listas: number[] = [];
         for (const cliente of rutaVisita) {
-          if(cliente.lista && !listas.includes(cliente.lista)) listas.push(cliente.lista);
+          if (cliente.lista && !listas.includes(cliente.lista)) listas.push(cliente.lista);
           //En esta parte quiero poner las listas que todavia no estan en la lista Listas
           const { data: deudas, error: deudasError } = await supabase
             .from('Deudas')
             .select(`*`)
             .eq('cliente', cliente.CODCL);
-    
+
           if (deudasError) throw new Error(deudasError.message);
 
           // Agregar las deudas al cliente para almacenar en IndexedDB después
@@ -206,91 +210,99 @@ const OfflineFirstForm: React.FC = () => {
         try {
           // Primero, consultar las listas de artículos desde Supabase, filtradas por los números de lista presentes en 'listas'
           if (listas.length > 0) {
-            const { data: listaArticulos, error: listaArticulosError } = await supabase
+            /* const { data: listaArticulos, error: listaArticulosError } = await supabase
               .from('ListaArticulos')
               .select('nro_lista, nro_articulo')  // Solo nro_lista y nro_articulo
               .in('nro_lista', listas);  // Filtrar por nro_lista que está en 'listas'
         
             if (listaArticulosError) {
               throw new Error(`Error al obtener lista de artículos: ${listaArticulosError.message}`);
-            }
-        
+            } */
             // Ahora, obtener el nombre de la lista para cada 'nro_lista' y su lista de artículos
             const listasConArticulos = [];
-        
+
             for (const lista of listas) {
               // Filtrar artículos por nro_lista
-              const articulos = listaArticulos.filter(item => item.nro_lista === lista);
-        
+              // console.log(listaArticulos)
+              // const articulos = listaArticulos.filter(item => item.nro_lista === lista);
+              // console.log(articulos)
               // Obtener el nombre de la lista (suponiendo que tienes alguna manera de obtener el nombre)
+              const { data: articulosEnLista, error } = await supabase
+                .from('Articulos')
+                .select(`
+               *,
+               ListaArticulos!inner( nro_lista )
+             `) // Incluye datos relacionados
+                .eq('ListaArticulos.nro_lista', lista); // Filtra por nro_lista = 1
+               console.log(articulosEnLista)
               const { data: nombreListaData, error: nombreListaError } = await supabase
                 .from('Lista')
                 .select('nombre')
                 .eq('id', lista)  // Filtrar por el nro_lista
                 .single();  // Solo esperamos un único resultado, ya que cada lista tiene un solo nombre
-        
+
               if (nombreListaError) {
                 throw new Error(`Error al obtener el nombre de la lista ${lista}: ${nombreListaError.message}`);
               }
-        
+
               // Crear un objeto para almacenar la lista con su nombre y los artículos
               listasConArticulos.push({
                 nro_lista: lista,
                 nombre: nombreListaData.nombre,
-                articulos: articulos
+                articulos: articulosEnLista
               });
             }
             console.log(listasConArticulos)
-        
+
             // Abre la base de datos de IndexedDB
             const db = await setUpDataBase();  // Asegúrate de que 'setUpDataBase' esté bien configurada
-        
+
             // Inicia una transacción para guardar las listas en la store 'Listas'
             const tx = db.transaction('ListaArticulos', 'readwrite');  // Usamos 'Listas' como store para las listas
-        
+
             // Guardar cada lista con los artículos en IndexedDB
             for (const listaData of listasConArticulos) {
               // Guardar en IndexedDB con la estructura correspondiente
               await tx.objectStore('ListaArticulos').put(listaData);
             }
-        
+
             // Esperar a que la transacción se complete
             await tx.done;
-        
+
             console.log("Listas guardadas en IndexedDB:", listasConArticulos);
           } else {
             console.log("No hay listas disponibles para consultar.");
           }
-        
+
         } catch (error) {
           console.error("Error al guardar listas en IndexedDB:", error);
         }
-        
+
         // console.log(listas)
         // Abre la base de datos y comienza la transacción después de obtener todos los datos
         const db = await setUpDataBase();
         const tx = db.transaction('RutaDeVisita', 'readwrite');
-    
+
         // Guardar cada cliente y sus deudas en IndexedDB
         for (const cliente of clientesConDeudas) {
           // Guardar cliente en la store 'RutaDeVisita'
           await tx.objectStore('RutaDeVisita').put(cliente);
         }
-    
-        await tx.done; // Esperar a que se complete la transacción
-    
 
-        setFormData({numero : '', clave: ''});
+        await tx.done; // Esperar a que se complete la transacción
+
+
+        setFormData({ numero: '', clave: '' });
         //setIsLoggedIn(true)
-        
-        
+
+
         sessionStorage.setItem('isLoggedIn', 'true');
         // router.push('/crearruta');
       }
 
       // await eliminarBaseDeDatosCompleta()
     } catch (error) {
-      if (error instanceof Error) { 
+      if (error instanceof Error) {
         alert('Error al guardar los datos: ' + error.message);
       }
       console.error('Error al guardar datos:', error);
@@ -325,16 +337,16 @@ const OfflineFirstForm: React.FC = () => {
             required
           />
         </div>
-        
-        <button 
-          type="submit" 
+
+        <button
+          type="submit"
           className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
           disabled={isSyncing}
         >
           {isSyncing ? 'Sincronizando...' : 'Guardar'}
         </button>
       </form>
-        
+
       <p className="mt-4">
         Estado: <span className={`font-bold ${isOnline ? 'text-green-500' : 'text-red-500'}`}>
           {isOnline ? 'En línea' : 'Fuera de línea'}

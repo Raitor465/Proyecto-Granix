@@ -3,7 +3,7 @@
 
 import { useState, ChangeEvent, useEffect } from 'react'
 import { Deuda } from "../deuda/page";
-import { RutaDeVisita } from "../crearruta/page";
+import { Cliente } from "../crearruta/page";
 import { setUpDataBase } from "@/lib/indexedDB"; 
 
 /* type Factura = {
@@ -23,7 +23,7 @@ export default function SolicitudPago() {
   async function ClienteInfo() {
     const db = await setUpDataBase();
     const tx = db.transaction('ClienteSucursal','readonly');
-    const clientes = await tx.store.getAll() as RutaDeVisita[];
+    const clientes = await tx.store.getAll() as Cliente[];
     const deudasCliente = clientes[0].deudas;
     setDeudas(deudasCliente)
     tx.done;

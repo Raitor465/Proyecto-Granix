@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut, Clipboard, Tag, MapPin, DollarSign, FileText, RefreshCw, Map, X } from 'lucide-react';
-import { RutaDeVisita } from "../crearruta/page";
+import { Cliente } from "../crearruta/page";
 import { setUpDataBase } from "@/lib/indexedDB";
 import Link from 'next/link';
 
@@ -21,7 +21,7 @@ const opciones = [
 ];
 
 export default function RutaVisita() {
-  const [clienteInfo, setClienteInfo] = useState<RutaDeVisita[]>([]);
+  const [clienteInfo, setClienteInfo] = useState<Cliente[]>([]);
   const [pagina_actual, setpagina_actual] = useState(1);
   const [mostrarModal, setMostrarModal] = useState(false);
 
@@ -32,7 +32,7 @@ export default function RutaVisita() {
 
   const antPag = () => setpagina_actual(prev => Math.max(prev - 1, 1));
   const sigPag = () => setpagina_actual(prev => Math.min(prev + 1, totalPages));
-  async function abrirModal(cliente: RutaDeVisita) {
+  async function abrirModal(cliente: Cliente) {
     try {
       const db = await setUpDataBase();
       const tx = db.transaction('ClienteSucursal', 'readwrite');

@@ -5,7 +5,7 @@ import {setUpDataBase, eliminarBaseDeDatosCompleta} from '../../lib/indexedDB'
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-export interface RutaDeVisita {
+export interface Cliente {
     id : number,
     CODCL : number,
     nombre : string,
@@ -21,6 +21,10 @@ export interface RutaDeVisita {
       filial: number;
       vendedor: number;
     }[];
+    email: string;
+    telefono: string;
+    notas: string;
+    entrega_observaciones: string;
 }
 
 const arrayFrecuencias = [
@@ -37,7 +41,7 @@ const arrayFrecuencias = [
 
 export const CrearRuta: React.FC = () => {
     const [frecuencias, setFrecuencia] = useState<{ nombre: any }[] | null>(null);
-    const [rutaInfo, setRutaInfo] = useState<RutaDeVisita[]>([]); 
+    const [rutaInfo, setRutaInfo] = useState<Cliente[]>([]); 
     const [sortOrder , setSortOrder] = useState('asc');
     const router = useRouter();
 
