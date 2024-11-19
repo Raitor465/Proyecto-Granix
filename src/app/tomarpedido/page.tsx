@@ -5,20 +5,6 @@ import { supabase } from '@/lib/supabase';
 import { Data } from '@react-google-maps/api';
 
 
-/*
-1. Ingresar el artículo
-    - Buscar el artículo por ID o nombre
-    - Mostrar sugerencias
-    - Seleccionar un artículo de la lista
-    - Ingresar la cantidad
-    - Agregar el artículo al pedido
-
-Guardar el pedido
-
-
-
-*/
-
 interface Precio {
     artic_pr: number;
     prec_bult: number;
@@ -53,6 +39,7 @@ interface Precio {
     const [bonificacionGeneral, setBonificacionGeneral] = useState<number>(0);  // Corregido tipo a número
     const [carrito, setCarrito] = useState <{ articulo: Articulo; cantidad: number; subtotal: number }[]>([]);
     const [cantidad, setCantidad] = useState<number | "">("");
+    const [bonificacionItem, setBonificacionItem] = useState<number | "">(""); // Nuevo estado para la bonificación específica del artículo
   
 
 
@@ -102,18 +89,12 @@ interface Precio {
             //console.log(data,clienteSucursalId);       
             //console.log((data?.[0].Bonificaciones?.[0].BG_porc) as number); // Accedemos a la bonificación general
             setBonificacionGeneral((data?.[0].Bonificaciones?.BG_porc) as number); // Accedemos a la bonificación general
-
-
-
-
             if (error) {
             console.error("Error al traer bonificaciones:", error);
             //setBonificacionGeneral(0); // Manejo de error
             return;
-          }
-          
+          } 
           //setBonificacionGeneral(bonificacion);
-      
         //   console.log("Bonificación general:", bonificacion);
         } catch (err) {
           console.error("Error inesperado al traer bonificaciones:", err);
@@ -155,7 +136,7 @@ interface Precio {
     );
 
     //--------------------------------------------------------------------------------
-    // Funciones para Bonificaciones
+    // Funciones para
 
 
 
@@ -163,25 +144,40 @@ interface Precio {
     //Funciones para sumar los totales----------------------------------------------
 
     const handleAgregarArticulo = (cantidad: number) => {
-        if (!articuloSeleccionado || cantidad <= 0) return;
-        const precio = articuloSeleccionado.Precios.prec_bult;
-        const subtotal = precio * cantidad;
+      if (!articuloSeleccionado || cantidad <= 0) return;
     
-        setCarrito((prev) => [
-          ...prev,
-          { articulo: articuloSeleccionado, cantidad, subtotal },
-        ]);
+      const precio = articuloSeleccionado.Precios.prec_bult;
     
-        setBusqueda("");
-        setArticuloSeleccionado(null);
-      };
+      // Calcular el descuento si existe
+      const descuentoItem =
+        bonificacionItem && Number(bonificacionItem) > 0
+          ? (precio * cantidad * Number(bonificacionItem)) / 100
+          : 0;
+    
+      const subtotal = precio * cantidad - descuentoItem;
+    
+      // Actualizar el carrito con la bonificación específica
+      setCarrito((prev) => [
+        ...prev,
+        {
+          articulo: articuloSeleccionado,
+          cantidad,
+          subtotal,
+          bonificacionItem: Number(bonificacionItem) || 0, // Guardar la bonificación específica del artículo
+        },
+      ]);
+    
+      setBusqueda("");
+      setArticuloSeleccionado(null);
+      setBonificacionItem(""); // Limpiar la bonificación específica
+    };
     
     const calcularTotal = () => {
-        const subtotal = carrito.reduce((acc, item) => acc + item.subtotal, 0);
-        const descuento = (subtotal * bonificacionGeneral) / 100;
-        //console.log(descuento);
-        return { subtotal, descuento, total: subtotal - descuento };
-      };
+      const subtotal = carrito.reduce((acc, item) => acc + item.subtotal, 0);
+      const descuentoGeneral = (subtotal * bonificacionGeneral) / 100;
+    
+      return { subtotal, descuento: descuentoGeneral, total: subtotal - descuentoGeneral };
+    };
     
     const { subtotal, descuento, total } = calcularTotal();
 
@@ -261,11 +257,13 @@ interface Precio {
           </select>
         </div>
         <div>
-          <label className="block text-gray-700 font-medium">Bon. Item</label>
+          <label className="block text-gray-700 font-medium">Bon. Item (%)</label>
           <input
-            type="text"
+            type="number"
             className="w-full border border-gray-300 rounded p-2 mt-1"
             placeholder="Ingrese bonificación"
+            value={bonificacionItem}
+            onChange={(e) => setBonificacionItem(Number(e.target.value) || "")}
           />
         </div>
         <div>
