@@ -10,14 +10,8 @@ import { useVendedor } from '@/lib/vendedorContext';
 async function MirarVendedores(){
   const db = await setUpDataBase();
   const tx = db.transaction('Vendedor','readonly');
-  // console.log(tx.store) 
   const vendedores = await tx.store.getAll(); // Obtiene todos los vendedores
-  // console.log(vendedores)
   tx.done;             
-
-  // Para eliminar el primer id del vendedor
-  // const tx = db.transaction('Vendedor','readwrite');
-  //await tx.store.delete(1)
 }
 
 export async function guardarVendedorLocal(vendedor: any){
@@ -184,22 +178,41 @@ const OfflineFirstForm: React.FC = () => {
         .from('ClienteSucursal')
         .select(`
           nombre,orden_visita,CODCL,            
-          RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id),
-          Direccion(calle,numero),
-          Frecuencia(id_frecuencia)         
-        `)
+          RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id,dia),
+          Direccion(calle,numero,latitud,longitud)
+          `)
         .eq('ruta_visita_id.numero_vend', data.numero)
-        .not('RutaDeVisita', 'is', null); // Asegura que RutaDeVisita no sea null
-        console.log(rutaVisita)
-        if (rutaVisita && rutaVisita.length > 0) {
+        .not('RutaDeVisita', 'is', null) // Asegura que RutaDeVisita no sea null
+        //.eq('ClienteFrecuencia.id_cliente', 'CODCL'); // Filtra para que solo coincidan los valores
+
+        // console.log(rutaVisita)
+        if (error) throw new Error(error.message);
+
+        const clientesConDeudas = [];
+
+        for (const cliente of rutaVisita) {
+          const { data: deudas, error: deudasError } = await supabase
+            .from('Deudas')
+            .select(`*`)
+            .eq('cliente', cliente.CODCL);
+
+          if (deudasError) throw new Error(deudasError.message);
+/*           console.log(cliente.CODCL);
+          console.log(deudas); */
+          // Agregar las deudas al cliente para almacenar en IndexedDB después
+          clientesConDeudas.push({ ...cliente, deudas });
+
+        }
+
+        // if (rutaVisita && rutaVisita.length > 0) {
           const db = await setUpDataBase();
           const tx = db.transaction('RutaDeVisita', 'readwrite');
         
-          for (const ruta of rutaVisita){
-            await tx.store.put(ruta);
+          for (const cliente of clientesConDeudas){
+            await tx.store.put(cliente);
           }
           await tx.done;
-        }
+        // }
 
 
         setFormData({numero : '', clave: ''});

@@ -1,7 +1,10 @@
 // src/app/solicitudpago/page.tsx
 "use client"
 
-import { useState, ChangeEvent } from 'react'
+import { useState, ChangeEvent,useEffect } from 'react'
+import { Deuda } from '../deuda/page'
+import { RutaDeVisita } from '../crearruta/page'
+import { setUpDataBase } from '@/lib/indexedDB'
 
 type Factura = {
   id: number
@@ -17,11 +20,23 @@ export default function SolicitudPago() {
     { id: 3, numero: "F003", importe: 800.75, fechaVencimiento: "2023-07-25" },
   ])
 
-  const [selectedFactura, setSelectedFactura] = useState<Factura | null>(null)
+  const[deudas, setDeudas] = useState<Deuda[]>([])
+  async function ClienteInfo() {
+    const db = await setUpDataBase();
+    const tx = db.transaction('ClienteSucursal','readonly');
+    const clientes = await tx.store.getAll() as RutaDeVisita[];
+    const deudasCliente = clientes[0].deudas;
+    setDeudas(deudasCliente)
+    tx.done;
+}
+  useEffect(() => {
+    ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
+  }, []);
+
+  const [selectedFactura, setSelectedFactura] = useState<Deuda | null>(null)
   const [comentario, setComentario] = useState('')
   const [archivo, setArchivo] = useState<File | null>(null)
-
-  const handleFacturaSelect = (factura: Factura) => {
+  const handleFacturaSelect = (factura: Deuda) => {
     setSelectedFactura(factura)
   }
 
@@ -48,15 +63,15 @@ export default function SolicitudPago() {
       <div className="mb-6">
         <h2 className="text-xl font-semibold mb-2">Facturas Disponibles</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {facturas.map((factura) => (
+          {deudas.map((factura) => (
             <div
-              key={factura.id}
+              key={factura.operacion}
               className={`p-4 border rounded-lg cursor-pointer ${
-                selectedFactura?.id === factura.id ? 'bg-blue-100 border-blue-500' : 'bg-white'
+                selectedFactura?.operacion === factura.operacion ? 'bg-blue-100 border-blue-500' : 'bg-white'
               }`}
               onClick={() => handleFacturaSelect(factura)}
             >
-              <p className="font-bold">Número: {factura.numero}</p>
+              <p className="font-bold">Número: {factura.operacion}</p>
               <p>Importe: ${factura.importe.toFixed(2)}</p>
               <p>Vencimiento: {factura.fechaVencimiento}</p>
             </div>
@@ -72,7 +87,7 @@ export default function SolicitudPago() {
           <input
             type="text"
             id="numeroOperacion"
-            value={selectedFactura ? selectedFactura.numero : ''}
+            value={selectedFactura ? selectedFactura.operacion : ''}
             readOnly
             className="w-full p-2 border rounded-md bg-gray-100"
           />
