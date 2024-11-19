@@ -203,7 +203,15 @@ interface Precio {
     
 
 
+    // Función para borrar todo el carrito
+    const handleCancelar = () => {
+      setCarrito([]); // Limpia el carrito
+    };
 
+    // Función para borrar un artículo específico del carrito
+    const handleBorrarItem = (index: number) => {
+    setCarrito((prev) => prev.filter((_, i) => i !== index)); // Elimina el artículo por índice
+    };
   
     // Función para manejar la navegación a otra página (ruta de visita)
     const handleNavigation = () => {
@@ -280,30 +288,30 @@ interface Precio {
           />
         </div>
         <div>
-          <label className="block text-gray-700 font-medium">Ingresar No Compra</label>
-          <select
-            className="w-full border border-gray-300 rounded p-2 mt-1"
-            defaultValue="" // Por defecto se selecciona la opción vacía
-          >
-            <option value="" disabled>Ingresar No Compra</option>
-            <option value="902">902 No Le Interesa</option>
-            <option value="903">903 Prefiere Al Distribuidor</option>
-            <option value="907">907 Tiene Stock</option>
-            <option value="908">908 Tiene Deuda</option>
-            <option value="909">909 Local Cerrado</option>
-            <option value="910">910 Cliente sin Dinero</option>
-            <option value="911">911 Compra Telefónica</option>
-            <option value="912">912 Comprador ausente</option>
-            <option value="913">913 Cambio de rubro</option>
-            <option value="914">914 Cambio de razón social</option>
-            <option value="915">915 Pedido diferido</option>
-            <option value="916">916 Problemas Impositivos</option>
-            <option value="917">917 Solo Retirar Pago</option>
-            <option value="918">918 Compra Próxima Visita</option>
-            <option value="919">919 Local Cerrado por Vacaciones</option>
-            <option value="920">920 No visitado</option>
-          </select>
-        </div>
+        <label className="block text-gray-700 font-medium">Ingresar No Compra</label>
+        <select
+          className="w-full border border-gray-300 rounded p-2 mt-1"
+          defaultValue="" // Por defecto se selecciona la opción vacía
+        >
+          <option value="" disabled>Ingresar No Compra</option>
+          <option value="902">902 No Le Interesa</option>
+          <option value="903">903 Prefiere Al Distribuidor</option>
+          <option value="907">907 Tiene Stock</option>
+          <option value="908">908 Tiene Deuda</option>
+          <option value="909">909 Local Cerrado</option>
+          <option value="910">910 Cliente sin Dinero</option>
+          <option value="911">911 Compra Telefónica</option>
+          <option value="912">912 Comprador ausente</option>
+          <option value="913">913 Cambio de rubro</option>
+          <option value="914">914 Cambio de razón social</option>
+          <option value="915">915 Pedido diferido</option>
+          <option value="916">916 Problemas Impositivos</option>
+          <option value="917">917 Solo Retirar Pago</option>
+          <option value="918">918 Compra Próxima Visita</option>
+          <option value="919">919 Local Cerrado por Vacaciones</option>
+          <option value="920">920 No visitado</option>
+        </select>
+      </div>
         <div>
           <label className="block text-gray-700 font-medium">Comentario</label>
           <input
@@ -349,6 +357,14 @@ interface Precio {
               <td className="border border-gray-300 p-2">
                 ${item.total.toFixed(2)}
               </td>
+              <td className="border border-gray-300 p-2">
+                  <button
+                    className="bg-red-500 text-white px-4 py-1 rounded"
+                    onClick={() => handleBorrarItem(index)} // Llama a la función con el índice
+                  >
+                    Borrar
+                  </button>
+                </td>
             </tr>
           ))}
         </tbody>
@@ -380,7 +396,10 @@ interface Precio {
       <button onClick={handleNavigation} className="bg-black text-white px-6 py-2 rounded-lg font-bold">
           Volver
         </button>
-        <button className="bg-black text-white px-6 py-2 rounded-lg font-bold">
+        <button
+          onClick={handleCancelar} // Llama a la función que vacía el carrito
+          className="bg-black text-white px-6 py-2 rounded-lg font-bold"
+        >
           Cancelar
         </button>
         <button className="bg-black text-white px-6 py-2 rounded-lg font-bold">
