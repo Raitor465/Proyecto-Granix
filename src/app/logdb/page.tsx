@@ -4,7 +4,7 @@ import React, { useState, useEffect, ChangeEvent } from 'react';
 import {setUpDataBase, eliminarBaseDeDatosCompleta} from '../../lib/indexedDB'
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { useVendedor } from '@/lib/vendedorContext';
+// import { useVendedor } from '@/lib/vendedorContext';
 
 
 async function MirarVendedores(){
@@ -126,7 +126,7 @@ const OfflineFirstForm: React.FC = () => {
     numero: '',
     clave: ''
   });
-  const { setVendedorId } = useVendedor();
+  // const { setVendedorId } = useVendedor();
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   // const [lastSync, setLastSync] = useState(null);

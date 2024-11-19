@@ -43,12 +43,13 @@ export default function RutaVisita() {
   const totalPages = Math.ceil(clienteInfo.length / botones_por_pagina);
   const startIndex = (pagina_actual - 1) * botones_por_pagina;
   const buttonsToShow = clienteInfo.slice(startIndex, startIndex + botones_por_pagina);
+  
 
 
   const antPag = () => setpagina_actual(prev => Math.max(prev - 1, 1));
   const sigPag = () => setpagina_actual(prev => Math.min(prev + 1, totalPages));
-  const abrirModal = () => setMostrarModal(true);
-  const cerrarModal = () => setMostrarModal(false);
+  //const abrirModal = () => setMostrarModal(true);
+  //const cerrarModal = () => setMostrarModal(false);
 
 
   async function ClienteInfo() {
@@ -62,10 +63,19 @@ export default function RutaVisita() {
     ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
   }, []);
 
+  // Función para abrir el modal y guardar CODCL
+  const abrirModal = (CODCL: string) => {
+    localStorage.setItem("clienteSeleccionado", CODCL); // Guarda el CODCL en localStorage
+    console.log("CODCL guardado:", CODCL); // Log para verificar
+    setMostrarModal(true); // Muestra el modal
+  };
+  const cerrarModal = () => setMostrarModal(false);
+  
+
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Aquí el contenido original de la página */}
+      {/* Encabezado */}
       <header className="p-4 bg-primary text-primary-foreground">
         <div className="flex justify-between items-center mb-4">
           <button
@@ -90,15 +100,25 @@ export default function RutaVisita() {
         </div>
       </header>
 
+      {/* Lista de clientes */}
       <main className="flex-grow flex flex-col p-4 space-y-4">
         {buttonsToShow.map((button, index) => (
           <button
             key={index}
             className="w-full h-auto py-4 flex flex-col items-start text-left border border-gray-300 rounded-lg bg-white hover:bg-gray-100 transition duration-200"
-            onClick={abrirModal}          
-            >
-            <span className="text-lg font-semibold pl-2">{'[' + button.orden_visita+ ']' + ' ' + button.nombre}</span>
-            <span className="text-sm text-gray-600 pl-2">{button.Direccion.calle + '' + button.Direccion.numero +' (' + button.CODCL + ')'  }</span>
+            onClick={() => abrirModal(String(button.CODCL))} // Pasa CODCL al modal
+          >
+            <span className="text-lg font-semibold pl-2">
+              {"[" + button.orden_visita + "] " + button.nombre}
+            </span>
+            <span className="text-sm text-gray-600 pl-2">
+              {button.Direccion.calle +
+                " " +
+                button.Direccion.numero +
+                " (" +
+                button.CODCL +
+                ")"}
+            </span>
           </button>
         ))}
       </main>
@@ -131,23 +151,6 @@ export default function RutaVisita() {
           </div>
         </div>
       )}
-      {/* <footer className="p-4 bg-muted">
-        <div className="grid grid-cols-3 gap-4">
-          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
-            <Menu className="mr-4 h-6 w-6" />
-            <span className="pl-2">Menú</span>
-          </button>
-          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
-            <MoreHorizontal className="mr-4 h-6 w-6" />
-            <span className="pl-2">Más opciones</span>
-          </button>
-          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
-            <LogOut className="mr-4 h-6 w-6" />
-            <span className="pl-2">Salir</span>
-          </button>
-        </div>
-      </footer> */}
-
     </div>
   );
 }
