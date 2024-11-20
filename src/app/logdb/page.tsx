@@ -180,6 +180,7 @@ const OfflineFirstForm: React.FC = () => {
           nombre,orden_visita,CODCL,            
           RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id),
           Direccion(calle,numero),
+          Bonificaciones(Bon_general, BG_porc),
           lista, 
           email, 
           notas, 
@@ -214,20 +215,24 @@ const OfflineFirstForm: React.FC = () => {
             const listasConArticulos = [];
 
             for (const lista of listas) {
-              const { data: articulosEnLista, error } = await supabase
+              const {data: articulosEnLista, error: errorEnPrueba } = await supabase
+              .from('ListaArticulos')
+              .select(`Articulos(*, Precios(prec_bult))`)
+              .eq('nro_lista', lista);
+              // console.log(articulosEnLista)
+              /* const { data: articulosEnLista, error } = await supabase
                 .from('Articulos')
                 .select(`
                *,
                ListaArticulos!inner( nro_lista )
              `) 
                 .eq('ListaArticulos.nro_lista', lista); 
-              //  console.log(articulosEnLista)
+              //  console.log(articulosEnLista) */
               const { data: nombreListaData, error: nombreListaError } = await supabase
                 .from('Lista')
                 .select('nombre')
                 .eq('id', lista)  // Filtrar por el nro_lista
                 .single();  // Solo esperamos un único resultado, ya que cada lista tiene un solo nombre
-
               if (nombreListaError) {
                 throw new Error(`Error al obtener el nombre de la lista ${lista}: ${nombreListaError.message}`);
               }
@@ -236,10 +241,10 @@ const OfflineFirstForm: React.FC = () => {
               listasConArticulos.push({
                 nro_lista: lista,
                 nombre: nombreListaData.nombre,
-                articulos: articulosEnLista
+                articulosEnLista
               });
             }
-            // console.log(listasConArticulos)
+            console.log(listasConArticulos)
 
             // Abre la base de datos de IndexedDB
             const db = await setUpDataBase();  

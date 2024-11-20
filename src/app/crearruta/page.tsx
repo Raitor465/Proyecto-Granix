@@ -9,8 +9,10 @@ export interface Cliente {
     id : number,
     CODCL : number,
     nombre : string,
+    lista: number,
     orden_visita : number,
     Direccion : {calle : string, numero : number}
+    Bonificaciones: {BG_porc: number, Bon_general: number};
     RutaDeVisita : {nombre : string, ruta_visita_id : number}
     Frecuencia : {id_frecuencai : number}
     deudas: {

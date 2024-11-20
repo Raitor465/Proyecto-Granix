@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
+import { Cliente } from "../crearruta/page";
+import { setUpDataBase } from "@/lib/indexedDB"; 
 
 // Simulated database of articles
 const articleDatabase = [
@@ -32,26 +34,46 @@ Guardar el pedido
 
 
 */
-interface Article {
-    id: string;
-    name: string;
-    prices: {
-        red: number;
-        yellow: number;
-        green: number;
-    };
-    quantity: number;
+interface Articulo {
+  CODIM_art: number; // Código del artículo
+  artic: number;     // Número de artículo
+  id: number;        // Identificador único
+  nombre: string;    // Nombre completo del artículo
+  abrev: string;     // Abreviatura o descripción corta
+  Precios: {
+    prec_bult: number; // Precio por bulto
+  };
+}
+interface ListaArt {
+  nro_lista: number;
+  nombre: string;
+  articulosEnLista: Articulo[];
 }
 
 export default function TomarPedido() {
     const [articleInput, setArticleInput] = useState('');
     const [suggestions, setSuggestions] = useState<typeof articleDatabase>([]);
     const [quantity, setQuantity] = useState('');
-    const [selectedArticles, setSelectedArticles] = useState<Article[]>([]);
+    const [selectedArticles, setSelectedArticles] = useState<Articulo[]>([]);
     const [selectedClient, setSelectedClient] = useState("");
     const [selectedBonuses, setSelectedBonuses] = useState<Record<string, string>>({});
     const [totalPrice, setTotalPrice] = useState(0);
 
+    async function ClienteInfo() {
+      const db = await setUpDataBase();
+      const tx = db.transaction('ClienteSucursal','readonly');
+      const clientes = await tx.store.getAll() as Cliente[];
+      const listaCliente = clientes[0].lista;
+      // setDeudas(deudasCliente)
+      const txArticulos = db.transaction('ListaArticulos', 'readonly');
+      const listaArticulos = await txArticulos.store.getAll() as ListaArt[];
+      const articulosFiltrados = listaArticulos.filter(articulo => articulo.nro_lista === listaCliente);
+      tx.done;
+      txArticulos.done;
+  }
+  useEffect(() => {
+    ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
+  }, []);
     useEffect(() => {
         if (articleInput) {
             const filtered = articleDatabase.filter(article =>
@@ -96,7 +118,7 @@ export default function TomarPedido() {
         setTotalPrice(total);
     };
 
-    const handleRemoveArticle = (id: string) => {
+    const handleRemoveArticle = (id: number) => {
         setSelectedArticles(prev => prev.filter(article => article.id !== id));
     };
 
