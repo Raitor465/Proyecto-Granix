@@ -217,7 +217,7 @@ const OfflineFirstForm: React.FC = () => {
             for (const lista of listas) {
               const {data: articulosEnLista, error: errorEnPrueba } = await supabase
               .from('ListaArticulos')
-              .select(`Articulos(*, Precios(prec_bult))`)
+              .select(`Articulos(*, Precios(prec_bult), Ivas(porc))`)
               .eq('nro_lista', lista);
               // console.log(articulosEnLista)
               /* const { data: articulosEnLista, error } = await supabase
@@ -244,13 +244,15 @@ const OfflineFirstForm: React.FC = () => {
                 articulosEnLista
               });
             }
-            console.log(listasConArticulos)
+            // console.log(listasConArticulos)
 
             // Abre la base de datos de IndexedDB
             const db = await setUpDataBase();  
 
             // Inicia una transacción para guardar las listas en la store 'Listas'
             const tx = db.transaction('ListaArticulos', 'readwrite');  // Usamos 'Listas' como store para las listas
+            const store = tx.objectStore('ListaArticulos');
+            await store.clear();  // Limpiar la store antes de guardar las listas
             // Guardar cada lista con los artículos en IndexedDB
             for (const listaData of listasConArticulos) {
               // Guardar en IndexedDB con la estructura correspondiente
