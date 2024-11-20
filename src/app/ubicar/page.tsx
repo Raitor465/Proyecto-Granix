@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { setUpDataBase } from '@/lib/indexedDB';
-import { RutaDeVisita } from '../crearruta/page';
+import { Cliente } from '../crearruta/page';
 
 interface Location {
   name: string;
@@ -28,7 +28,7 @@ export default function LocationViewerPage() {
     async function ClienteInfo() {
         const db = await setUpDataBase();
         const tx = db.transaction('ClienteSucursal','readonly');
-        const clientes = await tx.store.getAll() as RutaDeVisita[];
+        const clientes = await tx.store.getAll() as Cliente[];
         const location = {
             name: `${clientes[0].nombre} ${clientes[0].Direccion.calle} ${clientes[0].Direccion.numero}`,
             latitude : clientes[0].Direccion.latitud,
