@@ -19,6 +19,9 @@ export async function setUpDataBase() {
         db = await openDB(dbName,dbVersion, {
             upgrade(database) {
             database.createObjectStore('Vendedor', { keyPath: 'numero' });
+
+            database.createObjectStore('Pedido', { keyPath: 'id_pedido' ,autoIncrement: true });
+
             // vendedorStore.createIndex('sincronizado','sincronizado',{unique: false});
             // vendedorStore.createIndex('clave','clave',{unique: false});
 

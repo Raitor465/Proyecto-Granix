@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Data } from '@react-google-maps/api';
-
+import {setUpDataBase} from '@/lib/indexedDB';
 
 interface Precio {
     artic_pr: number;
@@ -49,6 +49,7 @@ interface Precio {
     }[]>([]);
     const [cantidad, setCantidad] = useState<number | "">("");
     const [bonificacionItem, setBonificacionItem] = useState<number | "">(""); // Nuevo estado para la bonificación específica del artículo
+    const [mensaje, setMensaje] = useState<string | null>(null); // Estado para mostrar mensaje de éxito/error
   
 
 
@@ -77,7 +78,7 @@ interface Precio {
       const { data, error } = await supabase
         .from("Articulos") // Consultamos la tabla "Articulos"
         .select(`* , Precios(*), Ivas(porc)`); // Seleccionamos todos los campos de "Articulos" y los precios relacionados en la tabla "Precios"
-        console.log(data);
+        //console.log(data);
       if (error) {
         console.error("Error al traer artículos:", error); // Si ocurre un error en la consulta, lo mostramos en la consola
         return;
@@ -144,11 +145,6 @@ interface Precio {
       articulo.nombre.toLowerCase().includes(busqueda.toLowerCase())
     );
 
-    //--------------------------------------------------------------------------------
-    // Funciones para
-
-
-
 
     //Funciones para sumar los totales----------------------------------------------
 
@@ -200,6 +196,53 @@ interface Precio {
     };
     
     const { subtotal, descuento, total } = calcularTotal();
+
+
+    // Función para guardar el carrito en la tabla `index`----------------------------------------------
+
+    const handleGuardarPedido = async () => {
+      if (carrito.length === 0) {
+        setMensaje("El carrito está vacío. No se puede guardar el pedido.");
+        return;
+      }
+    
+      try {
+        // Mapeamos los datos del carrito para adaptarlos a los campos de la tabla `index`
+        const itemsAGuardar = carrito.map((item) => ({
+          nombre: item.articulo.nombre, // Nombre del artículo
+          cantidad: item.cantidad, // Cantidad seleccionada
+          subtotal: item.subtotal, // Subtotal sin IVA
+          iva: item.iva, // IVA calculado
+          total: item.total, // Total con IVA
+        }));
+        console.log(itemsAGuardar);
+    
+        // Inserta los datos en la tabla `index`
+        // const { error } = await supabase.from("index").insert(itemsAGuardar);
+    
+        // if (error) {
+        //   console.error("Error al guardar el pedido:", error);
+        //   setMensaje("Hubo un error al guardar el pedido. Intente nuevamente.");
+        //   return;
+        // }
+
+        const db = await setUpDataBase();
+        const tx = db.transaction('Pedido','readwrite');
+        const store = tx.store;
+
+        await store.add(itemsAGuardar);
+        tx.done;
+    
+        // Muestra mensaje de éxito
+        setMensaje("¡El pedido se guardó correctamente!");
+    
+        // Limpia el carrito después de guardar
+        setCarrito([]);
+      } catch (err) {
+        console.error("Error inesperado:", err);
+        setMensaje("Ocurrió un error inesperado. Intente más tarde.");
+      }
+    };
     
 
 
@@ -222,6 +265,20 @@ interface Precio {
 
     return (
     <div className="min-h-screen bg-white p-8">
+      {/* Mensaje emergente */}
+      {mensaje && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg text-center">
+            <p className="text-lg font-bold">{mensaje}</p>
+            <button
+              onClick={() => setMensaje(null)} // Cierra el mensaje
+              className="mt-4 bg-black text-white px-4 py-2 rounded"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
       {/* Encabezado */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Cargar Pedido</h1>
@@ -402,7 +459,10 @@ interface Precio {
         >
           Cancelar
         </button>
-        <button className="bg-black text-white px-6 py-2 rounded-lg font-bold">
+        <button
+          onClick={handleGuardarPedido} // Guarda el pedido
+          className="bg-black text-white px-6 py-2 rounded-lg font-bold"
+        >
           Terminar
         </button>
       </div>
