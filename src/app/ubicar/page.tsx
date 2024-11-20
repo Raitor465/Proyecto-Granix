@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { setUpDataBase } from '@/lib/indexedDB';
 import { Cliente } from '../crearruta/page';
+import { LogOut } from 'lucide-react';
 
 interface Location {
   name: string;
@@ -43,6 +44,12 @@ export default function LocationViewerPage() {
         ClienteInfo();
     }, []);
 
+
+    // Función para manejar la navegación a otra página (ruta de visita)
+    const handleNavigation = () => {
+      window.location.href = "/rutavisita"; // Redirige al usuario a la ruta de visita
+    };
+
   return (
     <main className="min-h-screen">
       <div className="p-4 max-w-7xl mx-auto">
@@ -68,6 +75,10 @@ export default function LocationViewerPage() {
             )}
           </div>
         </div>
+            <button onClick={handleNavigation} className="bg-gray-300 p-3 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
+                  <LogOut onClick={handleNavigation} className="mr-2 h-5 w-5" />
+                  <span className="pl-1">Volver</span>
+            </button>
       </div>
     </main>
   );

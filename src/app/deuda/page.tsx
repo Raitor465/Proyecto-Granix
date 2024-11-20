@@ -3,6 +3,8 @@
 import { useState , useEffect} from 'react'
 import { setUpDataBase } from '@/lib/indexedDB'
 import { Cliente } from '../crearruta/page'
+import { LogOut } from 'lucide-react';
+
 // Definimos el tipo para los datos de deuda
 export type Deuda = {
   tipo: string
@@ -40,6 +42,12 @@ useEffect(() => {
 
   const totalDeuda = deudas.reduce((total, deuda) => total + deuda.importe, 0)
 
+
+  // Función para manejar la navegación a otra página (ruta de visita)
+  const handleNavigation = () => {
+    window.location.href = "/rutavisita"; // Redirige al usuario a la ruta de visita
+  };
+
   return (
     <div className="container mx-auto p-4">
       <div className="bg-white shadow-md rounded-lg p-6 mb-6">
@@ -73,6 +81,13 @@ useEffect(() => {
           </tbody>
         </table>
       </div>
+      <button
+          onClick={handleNavigation}
+          className="bg-gray-300 p-3 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center"
+        >
+          <LogOut className="mr-2 h-5 w-5" />
+          <span className="pl-1">Volver</span>
+        </button>
     </div>
   )
 }

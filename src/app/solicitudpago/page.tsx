@@ -5,6 +5,7 @@ import { useState, ChangeEvent, useEffect } from 'react'
 import { Deuda } from "../deuda/page";
 import { Cliente } from "../crearruta/page";
 import { setUpDataBase } from "@/lib/indexedDB"; 
+import { LogOut } from 'lucide-react';
 
 /* type Factura = {
   id: number
@@ -52,6 +53,13 @@ useEffect(() => {
     // Aquí iría la lógica para enviar la solicitud de pago
     console.log('Solicitud enviada:', { selectedFactura, comentario, archivo })
   }
+
+  // Función para manejar la navegación a otra página (ruta de visita)
+  const handleNavigation = () => {
+    window.location.href = "/rutavisita"; // Redirige al usuario a la ruta de visita
+  };
+
+  
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Solicitud de Pago</h1>
@@ -98,23 +106,21 @@ useEffect(() => {
             rows={3}
           ></textarea>
         </div>
-        <div>
-          <label htmlFor="archivo" className="block mb-1 font-medium">
-            Subir Archivo
-          </label>
-          <input
-            type="file"
-            id="archivo"
-            onChange={handleArchivoChange}
-            className="w-full p-2 border rounded-md"
-          />
-        </div>
+        <div className="flex justify-between items-center">
+        <button
+          onClick={handleNavigation}
+          className="bg-gray-300 p-3 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center"
+        >
+          <LogOut className="mr-2 h-5 w-5" />
+          <span className="pl-1">Volver</span>
+        </button>
         <button
           type="submit"
           className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
         >
           Enviar Solicitud
         </button>
+      </div>
       </form>
     </div>
   )
