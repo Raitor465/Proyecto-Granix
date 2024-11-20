@@ -2,40 +2,25 @@
 
 import React, { useEffect } from "react";
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut } from 'lucide-react';
-import { RutaDeVisita } from "../crearruta/page";
+import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut, Clipboard
+  , Tag, MapPin, DollarSign, FileText, RefreshCw, Map, X } from 'lucide-react';import { Cliente } from "../crearruta/page";
 import { setUpDataBase } from "@/lib/indexedDB";
 import Link from 'next/link';
 
-
-interface RouteButton {
-  title: string;
-  description: string;
-}
-
-const allButtons: RouteButton[] = [
-  { title: "Punto 1", description: "Descripción del punto 1" },
-  { title: "Punto 2", description: "Descripción del punto 2" },
-  { title: "Punto 3", description: "Descripción del punto 3" },
-  { title: "Punto 4", description: "Descripción del punto 4" },
-  { title: "Punto 5", description: "Descripción del punto 5" },
-  { title: "Punto 6", description: "Descripción del punto 6" },
-  { title: "Punto 7", description: "Descripción del punto 7" },
-];
 const botones_por_pagina = 5;
 
 const opciones = [
-  { name: "Cargar Pedido", img: "/path-to-icons/cargar-pedido.png", link: "/tomarpedido" },
-  { name: "Registrar Precios", img: "/path-to-icons/registrar-precios.png", link: "/registrarprecios" },
-  { name: "Ubicar Cliente", img: "/path-to-icons/ubicar-cliente.png", link: "/ubicar" },//ACA FALTA HACER LA PAGINA
-  { name: "Solicitud de Pago", img: "/path-to-icons/solicitud-pago.png", link: "/solicitudpago" },//ACA FALTA HACER LA PAGINA
-  { name: "Deuda Entidad", img: "/path-to-icons/deuda-entidad.png", link: "/deuda" },//ACA FALTA HACER LA PAGINA
-  { name: "Actualizar Datos", img: "/path-to-icons/actualizar-datos.png", link: "/actualizar-datos" },//ACA FALTA HACER LA PAGINA
-  { name: "Geocalizar", img: "/path-to-icons/geocalizar.png", link: "/geocalizar" },//ACA FALTA HACER LA PAGINA
+  { name: "Cargar Pedido", icon: Clipboard, link: "/tomarpedido" },
+  { name: "Registrar Precios", icon: Tag, link: "/registrarprecios" },
+  { name: "Ubicar Cliente", icon: MapPin, link: "/ubicar" },
+  { name: "Solicitud de Pago", icon: DollarSign, link: "/solicitudpago" },
+  { name: "Deuda Entidad", icon: FileText, link: "/deuda" },
+  { name: "Actualizar Datos", icon: RefreshCw, link: "/actualizardatos" },
+  { name: "Geocalizar", icon: Map, link: "/geocalizar" },
 ];
 
 export default function RutaVisita() {
-  const [clienteInfo,setClienteInfo] = useState<RutaDeVisita[]>([]);
+  const [clienteInfo,setClienteInfo] = useState<Cliente[]>([]);
   const [pagina_actual, setpagina_actual] = useState(1);
   const [mostrarModal, setMostrarModal] = useState(false);
 
@@ -46,7 +31,7 @@ export default function RutaVisita() {
 
   const antPag = () => setpagina_actual(prev => Math.max(prev - 1, 1));
   const sigPag = () => setpagina_actual(prev => Math.min(prev + 1, totalPages));
-  async function abrirModal (cliente : RutaDeVisita) {
+  async function abrirModal (cliente : Cliente) {
     try{
       const db = await setUpDataBase();
       const tx = db.transaction('ClienteSucursal', 'readwrite');
@@ -110,7 +95,7 @@ export default function RutaVisita() {
             onClick={() => abrirModal(button)}          
             >
             <span className="text-lg font-semibold pl-2">{'[' + button.orden_visita+ ']' + ' ' + button.nombre}</span>
-            <span className="text-sm text-gray-600 pl-2">{button.Direccion.calle + '' + button.Direccion.numero +' (' + button.CODCL + ')'  }</span>
+            <span className="text-sm text-gray-600 pl-2">{button.Direccion.calle + ' ' + button.Direccion.numero +' (' + button.CODCL + ')'  }</span>
           </button>
         ))}
       </main>
@@ -122,15 +107,11 @@ export default function RutaVisita() {
             <h2 className="text-2xl font-bold text-center mb-4">Opciones</h2>
             <div className="grid grid-cols-7 gap-4">
               {opciones.map((opcion, index) => (
-                <Link key={index} href={opcion.link}>
-                  <div className="flex flex-col items-center cursor-pointer">
-                    <img
-                      src={opcion.img}
-                      alt={`IMAGEN ${opcion.name}`}
-                      className="h-16 w-16"
-                    />
-                    <p>{opcion.name}</p>
-                  </div>
+                  <Link key={index} href={opcion.link} className="group">                  
+                    <div className="flex flex-col items-center p-4 rounded-lg hover:bg-gray-100 transition duration-200">
+                      <opcion.icon className="h-12 w-12 text-primary group-hover:text-primary-dark transition-colors duration-200" />
+                      <p className="mt-2 text-center text-sm font-medium">{opcion.name}</p>
+                    </div>
                 </Link>
               ))}
             </div>

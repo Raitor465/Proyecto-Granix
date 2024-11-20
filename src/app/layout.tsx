@@ -1,6 +1,8 @@
 "use client";
 import React, { ReactNode } from 'react';
 import "../styles/globals.css";
+import Image from "next/image"; // Componente para imágenes en Next.js
+import logo from "../lib/granix-logo.jpg"; // Importa el logo correctamente como un módulo estático
 
 interface LayoutProps {
   children: ReactNode;
@@ -16,9 +18,15 @@ export default function Layout({ children }: LayoutProps) {
       <body className="bg-white text-gray-800">
         {/* Header con color de fondo verde (#008839) y texto en blanco */}
         <header className="flex justify-between items-center p-4 bg-[#04945C] text-white">
-          <h1 className="text-2xl font-bold">Granix</h1>
+          <h1 className="text-2xl font-bold"></h1>
           <div>
-            <img src="/path/to/logo.png" alt="Logo" className="h-10" /> {/* Reemplaza con la ruta de tu logo */}
+          <Image
+              src={logo} // Uso correcto del logo
+              alt="Logo de Granix"
+              width={40} // Ajusta el ancho según tus necesidades
+              height={40} // Ajusta la altura según tus necesidades
+              className="h-10 w-auto"
+            />          
           </div>
         </header>
 

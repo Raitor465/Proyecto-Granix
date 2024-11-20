@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { setUpDataBase } from '@/lib/indexedDB';
-import { RutaDeVisita } from '../crearruta/page';
+import { Cliente } from '../crearruta/page';
 
 interface LocationData {
   id : number;
@@ -25,7 +25,7 @@ export default function GeolocalizarPage() {
   async function ClienteInfo() {
     const db = await setUpDataBase();
     const tx = db.transaction('ClienteSucursal','readonly');
-    const clientes = await tx.store.getAll() as RutaDeVisita[];
+    const clientes = await tx.store.getAll() as Cliente[];
     const location = {
         id : clientes[0].CODCL,
         name: `${clientes[0].nombre}, ${clientes[0].Direccion.calle} ${clientes[0].Direccion.numero}`,

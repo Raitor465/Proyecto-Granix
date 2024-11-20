@@ -20,10 +20,9 @@ const MapWithNoSSR = dynamic(() => import('./MapComponent'), {
 });
 
 export default function LocationViewerPage() {
-  const [searchTerm, setSearchTerm] = useState('');
     const [location, setLocations] = useState<Location | null>({name: '', latitude: 0, longitude: 0, created_at: '' });
-  const [mapCenter, setMapCenter] = useState<[number, number]>([-34.6037, -58.3816]); // Default to Buenos Aires
-  const [mapZoom, setMapZoom] = useState(16);
+    const [mapCenter, setMapCenter] = useState<[number, number]>([-34.6037, -58.3816]); // Default to Buenos Aires
+    const [mapZoom, setMapZoom] = useState(16);
 
 
     async function ClienteInfo() {
@@ -41,7 +40,7 @@ export default function LocationViewerPage() {
         tx.done;
         }
     useEffect(() => {
-        ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
+        ClienteInfo();
     }, []);
 
   return (

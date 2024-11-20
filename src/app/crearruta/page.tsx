@@ -5,7 +5,7 @@ import {setUpDataBase, eliminarBaseDeDatosCompleta} from '../../lib/indexedDB'
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-export interface RutaDeVisita {
+export interface Cliente {
     id : number,
     CODCL : number,
     nombre : string,
@@ -20,6 +20,10 @@ export interface RutaDeVisita {
       filial: number;
       vendedor: number;
     }[];
+    email: string;
+    telefono: string;
+    notas: string;
+    entrega_observaciones: string;
 }
 
 interface RutaInfo{
@@ -49,8 +53,8 @@ const dias = [
 
 export const CrearRuta: React.FC = () => {
   const [frecuenciaSeleccionada, setFrecuenciaSeleccionada] = useState<number[]>([]); // Cambiar de número a un array de números
-  const [rutasFiltradas, setRutasFiltradas] = useState<RutaDeVisita[]>([]);
-  const [rutaInfo, setRutaInfo] = useState<RutaDeVisita[]>([]);
+  const [rutasFiltradas, setRutasFiltradas] = useState<Cliente[]>([]);
+  const [rutaInfo, setRutaInfo] = useState<Cliente[]>([]);
   const [nombresRutas, setNombresRutas] = useState<RutaInfo[]>([]);
   const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(null);
     const [sortOrder , setSortOrder] = useState('asc');
@@ -79,7 +83,7 @@ export const CrearRuta: React.FC = () => {
         setRutasFiltradas(rutaInfo);
         console.log(rutasFiltradas)
         const nombresUnicos = Array.from(
-          new Set(rutaInfo.map((ruta: RutaDeVisita) => ruta.RutaDeVisita.nombre))
+          new Set(rutaInfo.map((ruta: Cliente) => ruta.RutaDeVisita.nombre))
         ).map((nombre) => ({ CODCL: 0, nombre }));
         setNombresRutas(nombresUnicos as RutaInfo[]);
       } else {
@@ -93,7 +97,7 @@ export const CrearRuta: React.FC = () => {
         );
       
         const nombresUnicos = Array.from(
-          new Set(rutasFiltradasActualizadas.map((ruta: RutaDeVisita) => ruta.RutaDeVisita.nombre))
+          new Set(rutasFiltradasActualizadas.map((ruta: Cliente) => ruta.RutaDeVisita.nombre))
         ).map((nombre) => ({ CODCL: 0, nombre }));
         setNombresRutas(nombresUnicos as RutaInfo[]);
         setRutasFiltradas(rutasFiltradasActualizadas);
@@ -141,7 +145,7 @@ export const CrearRuta: React.FC = () => {
 
         await tx.done;
 
-        // router.push(`/rutavisita`);
+        router.push(`/rutavisita`);
     };
 
     useEffect(() => {

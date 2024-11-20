@@ -179,7 +179,8 @@ const OfflineFirstForm: React.FC = () => {
         .select(`
           nombre,orden_visita,CODCL,            
           RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id,dia),
-          Direccion(calle,numero,latitud,longitud)
+          Direccion(calle,numero,latitud,longitud),
+          email,notas,telefono,entrega_observaciones
           `)
         .eq('ruta_visita_id.numero_vend', data.numero)
         .not('RutaDeVisita', 'is', null) // Asegura que RutaDeVisita no sea null
