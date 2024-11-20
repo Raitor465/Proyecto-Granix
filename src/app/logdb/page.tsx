@@ -135,9 +135,9 @@ const OfflineFirstForm: React.FC = () => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
-    // if (sessionStorage.getItem('isLoggedIn') === 'true') {
-    //   router.push('/crearruta'); // Redirige a CrearRuta
-    // }
+    if (sessionStorage.getItem('isLoggedIn') === 'true') {
+      router.push('/crearruta');
+    }
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -221,7 +221,7 @@ const OfflineFirstForm: React.FC = () => {
         
         
         sessionStorage.setItem('isLoggedIn', 'true');
-        // router.push('/crearruta');
+        router.push('/crearruta');
       }
 
       // await eliminarBaseDeDatosCompleta()
