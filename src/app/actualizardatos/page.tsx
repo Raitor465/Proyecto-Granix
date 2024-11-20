@@ -4,6 +4,7 @@
 import { setUpDataBase } from "@/lib/indexedDB";
 import { Cliente } from "../crearruta/page";
 import { useState, useEffect } from "react";
+import { LogOut } from 'lucide-react';
 
 export default function ActualizarDatos() {
   const [cliente, setCliente] = useState<Cliente | null>(null);
@@ -36,6 +37,12 @@ export default function ActualizarDatos() {
   };
 
   if (!cliente) return <div>Cargando...</div>;
+
+
+  // Función para manejar la navegación a otra página (ruta de visita)
+  const handleNavigation = () => {
+    window.location.href = "/rutavisita"; // Redirige al usuario a la ruta de visita
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -120,6 +127,14 @@ export default function ActualizarDatos() {
           Actualizar Datos
         </button>
       </form>
+      <footer className="p-4 bg-muted">
+                <div className="flex justify-between">
+                <button onClick={handleNavigation} className="bg-gray-300 p-3 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
+                        <LogOut onClick={handleNavigation} className="mr-2 h-5 w-5" />
+                        <span className="pl-1">Volver</span>
+                    </button>
+                </div>
+            </footer>
     </div>
   );
 }

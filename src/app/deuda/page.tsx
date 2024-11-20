@@ -2,6 +2,7 @@
 "use client"
 import { useState, useEffect } from 'react'
 import { Cliente } from "../crearruta/page";
+import { LogOut } from 'lucide-react';
 import { setUpDataBase } from "@/lib/indexedDB"; 
 
 
@@ -18,12 +19,10 @@ export type Deuda = {
 // Componente principal
 export default function Component() {
   const[deudas, setDeudas] = useState<Deuda[]>([])
-/*   const [deudas] = useState<Deuda[]>([
-    { tipo: "Factura", operacion: 1001, importe: 1500.00, fechaVencimiento: "2023-07-15", filial: 1, vendedor: 101 },
-    { tipo: "Factura", operacion: 1002, importe: 2300.50, fechaVencimiento: "2023-07-20", filial: 2, vendedor: 102 },
-    { tipo: "Factura", operacion: 1003, importe: 800.75, fechaVencimiento: "2023-07-25", filial: 1, vendedor: 103 },
-  ])
- */
+  // Función para manejar la navegación a otra página (ruta de visita)
+  const handleNavigation = () => {
+    window.location.href = "/rutavisita"; // Redirige al usuario a la ruta de visita
+  };
   async function ClienteInfo() {
     const db = await setUpDataBase();
     const tx = db.transaction('ClienteSucursal','readonly');
@@ -71,6 +70,14 @@ useEffect(() => {
           </tbody>
         </table>
       </div>
+      <footer className="p-4 bg-muted">
+        <div className="flex justify-between">
+          <button onClick={handleNavigation} className="bg-gray-300 p-3 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
+            <LogOut onClick={handleNavigation} className="mr-2 h-5 w-5" />
+            <span className="pl-1">Volver</span>
+          </button>
+        </div>
+      </footer>
     </div>
   )
 }

@@ -24,6 +24,7 @@ export async function guardarVendedorLocal(vendedor: any) {
   try {
     const db = await setUpDataBase();
     const tx = db.transaction('Vendedor', 'readwrite');
+    // tx.store.clear();
     await tx.store.put(vendedor);
     await tx.done
 
@@ -210,31 +211,17 @@ const OfflineFirstForm: React.FC = () => {
         try {
           // Primero, consultar las listas de artículos desde Supabase, filtradas por los números de lista presentes en 'listas'
           if (listas.length > 0) {
-            /* const { data: listaArticulos, error: listaArticulosError } = await supabase
-              .from('ListaArticulos')
-              .select('nro_lista, nro_articulo')  // Solo nro_lista y nro_articulo
-              .in('nro_lista', listas);  // Filtrar por nro_lista que está en 'listas'
-        
-            if (listaArticulosError) {
-              throw new Error(`Error al obtener lista de artículos: ${listaArticulosError.message}`);
-            } */
-            // Ahora, obtener el nombre de la lista para cada 'nro_lista' y su lista de artículos
             const listasConArticulos = [];
 
             for (const lista of listas) {
-              // Filtrar artículos por nro_lista
-              // console.log(listaArticulos)
-              // const articulos = listaArticulos.filter(item => item.nro_lista === lista);
-              // console.log(articulos)
-              // Obtener el nombre de la lista (suponiendo que tienes alguna manera de obtener el nombre)
               const { data: articulosEnLista, error } = await supabase
                 .from('Articulos')
                 .select(`
                *,
                ListaArticulos!inner( nro_lista )
-             `) // Incluye datos relacionados
-                .eq('ListaArticulos.nro_lista', lista); // Filtra por nro_lista = 1
-               console.log(articulosEnLista)
+             `) 
+                .eq('ListaArticulos.nro_lista', lista); 
+              //  console.log(articulosEnLista)
               const { data: nombreListaData, error: nombreListaError } = await supabase
                 .from('Lista')
                 .select('nombre')
@@ -252,14 +239,13 @@ const OfflineFirstForm: React.FC = () => {
                 articulos: articulosEnLista
               });
             }
-            console.log(listasConArticulos)
+            // console.log(listasConArticulos)
 
             // Abre la base de datos de IndexedDB
-            const db = await setUpDataBase();  // Asegúrate de que 'setUpDataBase' esté bien configurada
+            const db = await setUpDataBase();  
 
             // Inicia una transacción para guardar las listas en la store 'Listas'
             const tx = db.transaction('ListaArticulos', 'readwrite');  // Usamos 'Listas' como store para las listas
-
             // Guardar cada lista con los artículos en IndexedDB
             for (const listaData of listasConArticulos) {
               // Guardar en IndexedDB con la estructura correspondiente
@@ -282,7 +268,9 @@ const OfflineFirstForm: React.FC = () => {
         // Abre la base de datos y comienza la transacción después de obtener todos los datos
         const db = await setUpDataBase();
         const tx = db.transaction('RutaDeVisita', 'readwrite');
-
+        const store = tx.objectStore('RutaDeVisita');
+        await store.clear();
+        
         // Guardar cada cliente y sus deudas en IndexedDB
         for (const cliente of clientesConDeudas) {
           // Guardar cliente en la store 'RutaDeVisita'

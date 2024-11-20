@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut, Clipboard, Tag, MapPin, DollarSign, FileText, RefreshCw, Map, X } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut, Clipboard, Tag, MapPin, DollarSign, FileText, RefreshCw, Map, X, Wallet } from 'lucide-react';
 import { Cliente } from "../crearruta/page";
 import { setUpDataBase } from "@/lib/indexedDB";
 import Link from 'next/link';
-
 
 const botones_por_pagina = 5;
 
@@ -16,9 +14,13 @@ const opciones = [
   { name: "Ubicar Cliente", icon: MapPin, link: "/ubicar-cliente" },
   { name: "Solicitud de Pago", icon: DollarSign, link: "/solicitudpago" },
   { name: "Deuda Entidad", icon: FileText, link: "/deuda" },
-  { name: "Actualizar Datos", icon: RefreshCw, link: "/actualizardatos" },
+  { name: "Actualizar Datos", icon: RefreshCw, link: "/actualizar-datos" },
   { name: "Geocalizar", icon: Map, link: "/geocalizar" },
 ];
+
+const tieneDeudas = (cliente: { deudas?: any[] }) => {
+  return cliente.deudas && cliente.deudas.length > 0;
+};
 
 export default function RutaVisita() {
   const [clienteInfo, setClienteInfo] = useState<Cliente[]>([]);
@@ -29,9 +31,9 @@ export default function RutaVisita() {
   const startIndex = (pagina_actual - 1) * botones_por_pagina;
   const buttonsToShow = clienteInfo.slice(startIndex, startIndex + botones_por_pagina);
 
-
   const antPag = () => setpagina_actual(prev => Math.max(prev - 1, 1));
   const sigPag = () => setpagina_actual(prev => Math.min(prev + 1, totalPages));
+
   async function abrirModal(cliente: Cliente) {
     try {
       const db = await setUpDataBase();
@@ -43,44 +45,42 @@ export default function RutaVisita() {
     } catch (error) {
       console.error('Error al abrir el modal', error)
     }
-    setMostrarModal(true); // Muestra el modal
+    setMostrarModal(true);
   };
-  const cerrarModal = () => setMostrarModal(false);
 
+  const cerrarModal = () => setMostrarModal(false);
 
   async function ClienteInfo() {
     const db = await setUpDataBase();
     const tx = db.transaction('RutaDeVisita', 'readonly');
     const clientes = await tx.store.getAll();
-    // console.log(clientes)
     setClienteInfo(clientes)
     tx.done;
   }
-  useEffect(() => {
-    ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
-  }, []);
 
+  useEffect(() => {
+    ClienteInfo();
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Aquí el contenido original de la página */}
       <header className="p-4 bg-primary text-primary-foreground">
         <div className="flex justify-between items-center mb-4">
           <button
             onClick={antPag}
             disabled={pagina_actual === 1}
-            className="bg-gray-300 p-4 rounded-md hover:bg-gray-300 transition duration-200"
+            className="bg-gray-300 p-4 rounded-md hover:bg-gray-400 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="h-4 w-4" />
             <span className="sr-only">Página anterior</span>
           </button>
-          <span className="text-xl font-bold text-primary">
+          <span className="text-xl font-bold">
             Página {pagina_actual} de {totalPages}
           </span>
           <button
             onClick={sigPag}
             disabled={pagina_actual === totalPages}
-            className="bg-gray-300 p-4 rounded-md hover:bg-gray-300 transition duration-200"
+            className="bg-gray-300 p-4 rounded-md hover:bg-gray-400 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ChevronRight className="h-4 w-4" />
             <span className="sr-only">Página siguiente</span>
@@ -92,15 +92,18 @@ export default function RutaVisita() {
         {buttonsToShow.map((button, index) => (
           <button
             key={index}
-            className="w-full h-auto py-4 flex flex-col items-start text-left border border-gray-300 rounded-lg bg-white hover:bg-gray-100 transition duration-200"
-            onClick={() => abrirModal(button)} // Pasa CODCL al modal       
+            className="w-full h-auto py-4 flex flex-col items-start text-left border border-gray-300 rounded-lg bg-white hover:bg-gray-100 transition duration-200 relative"
+            onClick={() => abrirModal(button)}
           >
+            {tieneDeudas(button) && (
+              <Wallet className="absolute top-0 right-0 h-6 w-6 text-red-500 m-2" />
+            )}
             <span className="text-lg font-semibold pl-2">{'[' + button.orden_visita + ']' + ' ' + button.nombre}</span>
             <span className="text-sm text-gray-600 pl-2">{button.Direccion.calle + '' + button.Direccion.numero + ' (' + button.CODCL + ')'}</span>
           </button>
         ))}
       </main>
-      {/* Modal superpuesto */}
+
       {mostrarModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full m-4">
@@ -129,23 +132,23 @@ export default function RutaVisita() {
           </div>
         </div>
       )}
+
       <footer className="p-4 bg-muted">
         <div className="grid grid-cols-3 gap-4">
-          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
-            <Menu className="mr-4 h-6 w-6" />
-            <span className="pl-2">Menú</span>
+          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center justify-center">
+            <Menu className="mr-2 h-6 w-6" />
+            <span>Menú</span>
           </button>
-          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
-            <MoreHorizontal className="mr-4 h-6 w-6" />
-            <span className="pl-2">Más opciones</span>
+          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center justify-center">
+            <MoreHorizontal className="mr-2 h-6 w-6" />
+            <span>Más opciones</span>
           </button>
-          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
-            <LogOut className="mr-4 h-6 w-6" />
-            <span className="pl-2">Salir</span>
+          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center justify-center">
+            <LogOut className="mr-2 h-6 w-6" />
+            <span>Salir</span>
           </button>
         </div>
       </footer>
-
     </div>
   );
 }

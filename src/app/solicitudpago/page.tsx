@@ -4,33 +4,22 @@
 import { useState, ChangeEvent, useEffect } from 'react'
 import { Deuda } from "../deuda/page";
 import { Cliente } from "../crearruta/page";
-import { setUpDataBase } from "@/lib/indexedDB"; 
-
-/* type Factura = {
-  id: number
-  numero: string
-  importe: number
-  fechaVencimiento: string
-} */
+import { setUpDataBase } from "@/lib/indexedDB";
+import { LogOut } from 'lucide-react';
 
 export default function SolicitudPago() {
-  /* const [facturas] = useState<Factura[]>([
-    { id: 1, numero: "F001", importe: 1500.00, fechaVencimiento: "2023-07-15" },
-    { id: 2, numero: "F002", importe: 2300.50, fechaVencimiento: "2023-07-20" },
-    { id: 3, numero: "F003", importe: 800.75, fechaVencimiento: "2023-07-25" },
-  ]) */
-  const[deudas, setDeudas] = useState<Deuda[]>([])
+  const [deudas, setDeudas] = useState<Deuda[]>([])
   async function ClienteInfo() {
     const db = await setUpDataBase();
-    const tx = db.transaction('ClienteSucursal','readonly');
+    const tx = db.transaction('ClienteSucursal', 'readonly');
     const clientes = await tx.store.getAll() as Cliente[];
     const deudasCliente = clientes[0].deudas;
     setDeudas(deudasCliente)
     tx.done;
-}
-useEffect(() => {
-  ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
-}, []);
+  }
+  useEffect(() => {
+    ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
+  }, []);
   const [selectedFactura, setSelectedFactura] = useState<Deuda | null>(null)
   const [comentario, setComentario] = useState('')
   const [archivo, setArchivo] = useState<File | null>(null)
@@ -38,7 +27,10 @@ useEffect(() => {
   const handleFacturaSelect = (factura: Deuda) => {
     setSelectedFactura(factura)
   }
-
+  // Función para manejar la navegación a otra página (ruta de visita)
+  const handleNavigation = () => {
+    window.location.href = "/rutavisita"; // Redirige al usuario a la ruta de visita
+  };
   const handleComentarioChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setComentario(e.target.value)
   }
@@ -65,9 +57,8 @@ useEffect(() => {
           {deudas.map((factura) => (
             <div
               key={factura.operacion}
-              className={`p-4 border rounded-lg cursor-pointer ${
-                selectedFactura?.operacion === factura.operacion ? 'bg-blue-100 border-blue-500' : 'bg-white'
-              }`}
+              className={`p-4 border rounded-lg cursor-pointer ${selectedFactura?.operacion === factura.operacion ? 'bg-blue-100 border-blue-500' : 'bg-white'
+                }`}
               onClick={() => handleFacturaSelect(factura)}
             >
               <p className="font-bold">Número: {factura.operacion}</p>
@@ -124,6 +115,14 @@ useEffect(() => {
           Enviar Solicitud
         </button>
       </form>
+      <footer className="p-4 bg-muted">
+        <div className="flex justify-between">
+          <button onClick={handleNavigation} className="bg-gray-300 p-3 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
+            <LogOut onClick={handleNavigation} className="mr-2 h-5 w-5" />
+            <span className="pl-1">Volver</span>
+          </button>
+        </div>
+      </footer>
     </div>
   )
 }
