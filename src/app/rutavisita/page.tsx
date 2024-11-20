@@ -11,10 +11,10 @@ const botones_por_pagina = 5;
 const opciones = [
   { name: "Cargar Pedido", icon: Clipboard, link: "/tomarpedido" },
   { name: "Registrar Precios", icon: Tag, link: "/registrarprecios" },
-  { name: "Ubicar Cliente", icon: MapPin, link: "/ubicar-cliente" },
+  { name: "Ubicar Cliente", icon: MapPin, link: "/ubicar" },
   { name: "Solicitud de Pago", icon: DollarSign, link: "/solicitudpago" },
   { name: "Deuda Entidad", icon: FileText, link: "/deuda" },
-  { name: "Actualizar Datos", icon: RefreshCw, link: "/actualizar-datos" },
+  { name: "Actualizar Datos", icon: RefreshCw, link: "/actualizardatos" },
   { name: "Geocalizar", icon: Map, link: "/geocalizar" },
 ];
 
