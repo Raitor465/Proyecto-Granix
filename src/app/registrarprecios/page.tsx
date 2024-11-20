@@ -54,6 +54,11 @@ export default function RegistrarPrecio() {
         }
     };
 
+    // Función para manejar la navegación a otra página (ruta de visita)
+    const handleNavigation = () => {
+        window.location.href = "/rutavisita"; // Redirige al usuario a la ruta de visita
+      };
+
     return (
         <div className="max-w-4xl mx-auto p-4 space-y-4 text-lg">
             <h1 className="text-2xl font-bold text-center mb-6">Lista N° #</h1>
@@ -116,13 +121,13 @@ export default function RegistrarPrecio() {
 
             <footer className="p-4 bg-muted">
                 <div className="flex justify-between">
-                    <button className="bg-gray-300 p-3 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
-                        <Menu className="mr-2 h-5 w-5" />
-                        <span className="pl-1">Menú</span>
+                <button onClick={handleNavigation} className="bg-gray-300 p-3 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
+                        <LogOut onClick={handleNavigation} className="mr-2 h-5 w-5" />
+                        <span className="pl-1">Volver</span>
                     </button>
                     <button className="bg-gray-300 p-3 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
-                        <LogOut className="mr-2 h-5 w-5" />
-                        <span className="pl-1">Salir</span>
+                        <Menu className="mr-2 h-5 w-5" />
+                        <span className="pl-1">Guardar</span>
                     </button>
                 </div>
             </footer>

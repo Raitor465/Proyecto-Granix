@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { setUpDataBase } from '@/lib/indexedDB';
 import { Cliente } from '../crearruta/page';
+import { LogOut} from 'lucide-react';
 
 interface LocationData {
   id : number;
@@ -124,6 +125,12 @@ export default function GeolocalizarPage() {
     }
 
   };
+
+  // Función para manejar la navegación a otra página (ruta de visita)
+  const handleNavigation = () => {
+    window.location.href = "/rutavisita"; // Redirige al usuario a la ruta de visita
+  };
+
   return (
     <main className="min-h-screen p-4">
       <div className="max-w-md mx-auto">
@@ -175,6 +182,14 @@ export default function GeolocalizarPage() {
             </button>
           </div>
         </form>
+        <footer className="p-4 bg-muted">
+                <div className="flex justify-between">
+                <button onClick={handleNavigation} className="bg-gray-300 p-3 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
+                        <LogOut onClick={handleNavigation} className="mr-2 h-5 w-5" />
+                        <span className="pl-1">Volver</span>
+                    </button>
+                </div>
+            </footer>
       </div>
     </main>
   );

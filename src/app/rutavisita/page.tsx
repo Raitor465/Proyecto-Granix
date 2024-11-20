@@ -3,7 +3,8 @@
 import React, { useEffect } from "react";
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut, Clipboard
-  , Tag, MapPin, DollarSign, FileText, RefreshCw, Map, X } from 'lucide-react';import { Cliente } from "../crearruta/page";
+  , Tag, MapPin, DollarSign, FileText, RefreshCw, Map, X } from 'lucide-react';
+import { Cliente } from "../crearruta/page";
 import { setUpDataBase } from "@/lib/indexedDB";
 import Link from 'next/link';
 
