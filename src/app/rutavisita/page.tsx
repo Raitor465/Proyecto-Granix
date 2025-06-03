@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut, Clipboard
   , Tag, MapPin, DollarSign, FileText, RefreshCw, Map, X } from 'lucide-react';
 import { Cliente } from "../crearruta/page";
-import { setUpDataBase } from "@/lib/indexedDB";
+import { eliminarBaseDeDatosCompleta, setUpDataBase } from "@/lib/indexedDB";
 import Link from 'next/link';
 
 const botones_por_pagina = 5;
@@ -59,6 +59,32 @@ export default function RutaVisita() {
   useEffect(() => {
     ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
   }, []);
+
+
+  const logout = async () => {
+    try {
+      // Establece isLoggedIn como false en Session Storage
+      sessionStorage.setItem("isLoggedIn", "false");
+  
+      // Opcional: Limpia otros datos almacenados en sessionStorage
+      sessionStorage.removeItem("vendedorId");
+      sessionStorage.removeItem("vendedorData");
+  
+      // Limpia datos de IndexedDB si es necesario
+      const db = await setUpDataBase();
+      const tx = db.transaction(["ClienteSucursal", "RutaDeVisita"], "readwrite");
+      tx.objectStore("ClienteSucursal").clear();
+      tx.objectStore("RutaDeVisita").clear();
+      await tx.done;
+      // await eliminarBaseDeDatosCompleta();
+  
+      // Redirige al usuario a la página de login
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error durante el logout", error);
+      alert("Ocurrió un error al cerrar sesión");
+    }
+  };
 
 
   return (
@@ -135,7 +161,10 @@ export default function RutaVisita() {
             <MoreHorizontal className="mr-4 h-6 w-6" />
             <span className="pl-2">Más opciones</span>
           </button>
-          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
+            <button
+            className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center"
+            onClick={logout}
+          >
             <LogOut className="mr-4 h-6 w-6" />
             <span className="pl-2">Salir</span>
           </button>
