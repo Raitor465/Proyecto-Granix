@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 export interface Cliente {
     id : number,
     CODCL : number,
+    TPLIS : number,
     nombre : string,
     orden_visita : number,
     Direccion : {calle : string, numero : number, latitud : number , longitud : number}
@@ -67,7 +68,7 @@ export const CrearRuta: React.FC = () => {
       const tx = db.transaction('RutaDeVisita','readonly');
       const rutas = await tx.store.getAll();
       setRutaInfo(rutas);
-      setRutasFiltradas(rutas); // Mostrar todas inicialmente      tx.done;
+      setRutasFiltradas(rutas); // Mostrar todas inicialmente tx.done;
 
 
     }
@@ -113,7 +114,7 @@ export const CrearRuta: React.FC = () => {
         const formData = new FormData(event.currentTarget);
         const selectedRutaId = formData.get("ruta");
         const sortOrder = formData.get("orden");
-        console.log(selectedRutaId,sortOrder)
+        //console.log(selectedRutaId,sortOrder)
         if (!selectedRutaId) {
             alert("Por favor, selecciona una ruta.");
             return;
@@ -132,8 +133,9 @@ export const CrearRuta: React.FC = () => {
         const tx = db.transaction('RutaDeVisita', 'readwrite');
         const store = tx.store;
         const todasLasRutas = await store.getAll();
+        
 
-        // // Identificar las rutas a eliminar (no están en rutasOrdenadas)
+        // Identificar las rutas a eliminar (no están en rutasOrdenadas)
         const idsParaEliminar = todasLasRutas
             .filter((ruta: { id: number; }) => !rutasOrdenadas.some(r => r.id === ruta.id))
             .map((ruta: { id: any; }) => ruta.id);
@@ -144,6 +146,19 @@ export const CrearRuta: React.FC = () => {
         }
 
         await tx.done;
+        
+        // Eliminar las lista de precios que no estén dentro de los precios filtrados jaja.
+        const txtx = db.transaction('Precios','readwrite');
+        const storetx = txtx.store;
+        const todasListasPrecios = await storetx.getAll();
+        const tplisUsados = new Set(rutasOrdenadas.map((r) => r.TPLIS))
+
+        for (const precio of todasListasPrecios){
+          if (!tplisUsados.has(precio.TPLIS)){
+            await storetx.delete(precio.TPLIS)
+          }
+        }
+        await txtx.done;
 
         router.push(`/rutavisita`);
     };

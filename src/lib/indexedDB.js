@@ -19,40 +19,15 @@ export async function setUpDataBase() {
         db = await openDB(dbName,dbVersion, {
             upgrade(database) {
             database.createObjectStore('Vendedor', { keyPath: 'numero' });
-            // vendedorStore.createIndex('sincronizado','sincronizado',{unique: false});
-            // vendedorStore.createIndex('clave','clave',{unique: false});
-
+            
             database.createObjectStore('RutaDeVisita', { keyPath: 'id', autoIncrement: true });
-            // provinciaStore.createIndex('nombre', 'nombre',{unique: true});
             
             database.createObjectStore('ClienteSucursal', {keyPath : 'CODCL'})
-            // localidadStore.createIndex('nombre','nombre',{unique: true});
-            // localidadStore.createIndex('provincia_id','provincia_id',{unique:false});
-
+            
             database.createObjectStore('Direccion', {keyPath : 'direccion_id'})
-            // zonaStore.createIndex('nombre','nombre',{unique: true});
-            // zonaStore.createIndex('barrio','barrio',{unique: true});
-            // zonaStore.createIndex('localidad_id','localidad_id',{unique:false});
 
-            // database.createObjectStore('Zona', {keyPath : 'ruta_visita_id'})
-            // rutavisitaStore.createIndex('dia','dia',{unique: true});
-            // rutavisitaStore.createIndex('vendedor_id','vendedor_id',{unique: false});
-            // rutavisitaStore.createIndex('zona_id','zona_id',{unique:false});
+            database.createObjectStore('Precios', { keyPath: 'TPLIS' });
 
-
-            //vendedorStore.createIndex('contraseña','contraseña',{unique: false});
-            // database.createObjectStore('Zona', { keyPath: 'zona_id' });
-            // database.createObjectStore('RutaVisita', { keyPath: 'ruta_visita_id' });
-            // database.createObjectStore('Articulo', { keyPath: 'articulo_id' });
-            // database.createObjectStore('Cliente', { keyPath: 'cliente_id' });
-            // database.createObjectStore('Deuda', { keyPath: 'deuda_id' });
-            // database.createObjectStore('Direccion', { keyPath: 'direccion_id' });
-            // database.createObjectStore('Localidad', { keyPath: 'localidad_id' });
-            // database.createObjectStore('Provincia', { keyPath: 'provincia_id' });
-            // database.createObjectStore('Frecuencia', { keyPath: 'frecuencia_id' });
-            // database.createObjectStore('Categoria', { keyPath: 'categoria_id' });
-            // database.createObjectStore('Bonificacion', { keyPath: 'bonificacion_id' });
-            // database.createObjectStore('ListaArticulos', { keyPath: 'lista_articulos_id' });
             console.log('Base de datos creada o abierta exitosamente.');
          },
         })

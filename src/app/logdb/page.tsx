@@ -7,6 +7,16 @@ import { useRouter } from 'next/navigation';
 import { useVendedor } from '@/lib/vendedorContext';
 
 
+type ArticuloConPrecio = {
+  prec_bult: number;
+  NULIS: number;
+  // Articulos: {
+  //   nombre: string;
+  //   abrev: string;
+  // };
+};
+
+
 async function MirarVendedores(){
   const db = await setUpDataBase();
   const tx = db.transaction('Vendedor','readonly');
@@ -136,11 +146,7 @@ const OfflineFirstForm: React.FC = () => {
     const handleOffline = () => setIsOnline(false);
 
     if (sessionStorage.getItem('isLoggedIn') === 'true') {
-<<<<<<< HEAD
       router.push('/menu'); // Redirige a CrearRuta
-=======
-      router.push('/crearruta');
->>>>>>> ad34913b8ed212b3c83fcd9a68b1f8052c62e6b8
     }
 
     window.addEventListener('online', handleOnline);
@@ -160,86 +166,229 @@ const OfflineFirstForm: React.FC = () => {
     }));
   };
 
-  const saveData = async (e : React.FormEvent) => {
-    e.preventDefault();
-    
-    // const now = new Date().toISOString();
-    const data = { 
-      numero: Number(formData.numero), // Asegúrate de que sea un número
-      clave : formData.clave,
-      // email: formData.email,
-      //created_at: now,
-      //sincronizado: false
-    };
-
-    try {
-      const vendedor = await login(data.numero,data.clave);
-      console.log(vendedor)
-      if (vendedor){
-        alert('Datos guardados correctamente')
-        //console.log(data.numero)
-        const { data : rutaVisita, error } = await supabase
-        .from('ClienteSucursal')
-        .select(`
-          nombre,orden_visita,CODCL,            
-          RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id,dia),
-          Direccion(calle,numero,latitud,longitud),
-          email,notas,telefono,entrega_observaciones
-          `)
-        .eq('ruta_visita_id.numero_vend', data.numero)
-        .not('RutaDeVisita', 'is', null) // Asegura que RutaDeVisita no sea null
-        //.eq('ClienteFrecuencia.id_cliente', 'CODCL'); // Filtra para que solo coincidan los valores
-
-        // console.log(rutaVisita)
-        if (error) throw new Error(error.message);
-
-        const clientesConDeudas = [];
-
-        for (const cliente of rutaVisita) {
-          const { data: deudas, error: deudasError } = await supabase
-            .from('Deudas')
-            .select(`*`)
-            .eq('cliente', cliente.CODCL);
-
-          if (deudasError) throw new Error(deudasError.message);
-/*           console.log(cliente.CODCL);
-          console.log(deudas); */
-          // Agregar las deudas al cliente para almacenar en IndexedDB después
-          clientesConDeudas.push({ ...cliente, deudas });
-
-        }
-
-        // if (rutaVisita && rutaVisita.length > 0) {
-          const db = await setUpDataBase();
-          const tx = db.transaction('RutaDeVisita', 'readwrite');
-        
-          for (const cliente of clientesConDeudas){
-            await tx.store.put(cliente);
-          }
-          await tx.done;
-        // }
 
 
-        setFormData({numero : '', clave: ''});
-        //setIsLoggedIn(true)
-        
-        
-        sessionStorage.setItem('isLoggedIn', 'true');
-<<<<<<< HEAD
-        router.push('/menu');
-=======
-        router.push('/crearruta');
->>>>>>> ad34913b8ed212b3c83fcd9a68b1f8052c62e6b8
-      }
+  const saveData = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-      // await eliminarBaseDeDatosCompleta()
-    } catch (error) {
-      if (error instanceof Error) { 
-        alert('Error al guardar los datos: ' + error.message);
-      }
-      console.error('Error al guardar datos:', error);
-    }
+  const data = {
+    numero: Number(formData.numero),
+    clave: formData.clave,
   };
+
+  try {
+    const vendedor = await login(data.numero, data.clave);
+    if (!vendedor) return;
+
+    alert('Datos guardados correctamente');
+
+    const { data: rutaVisita, error } = await supabase
+      .from('ClienteSucursal')
+      .select(`
+        nombre, orden_visita, CODCL, TPLIS,
+        RutaDeVisita:ruta_visita_id(nombre, ruta_visita_id, dia),
+        Direccion(calle, numero, latitud, longitud),
+        email, notas, telefono, entrega_observaciones
+      `)
+      .eq('ruta_visita_id.numero_vend', data.numero)
+      .not('RutaDeVisita', 'is', null);
+
+    if (error) throw new Error(error.message);
+
+    const clientesConDeudas: any[] = [];
+
+    for (const cliente of rutaVisita) {
+      const { data: deudas, error: deudasError } = await supabase
+        .from('Deudas')
+        .select(`*`)
+        .eq('cliente', cliente.CODCL);
+
+      if (deudasError) throw new Error(deudasError.message);      
+
+      clientesConDeudas.push({
+        ...cliente,
+        deudas
+      });
+
+      
+    }
+    // Para buscar de supabase los precios y articulos
+      const { data: maxNulisList, error: maxNulisError } = await supabase
+      .from('Precios')
+      .select('artic_pr, TPLIS, NULIS')
+      //.eq('TPLIS', cliente.TPLIS)
+      .order('NULIS', { ascending: false });
+
+      if (maxNulisError) throw new Error(maxNulisError.message);
+
+      const latestPricesMap = new Map();
+
+      for (const item of maxNulisList) {
+        const key = `${item.artic_pr}-${item.TPLIS}`;
+        if (!latestPricesMap.has(key)) {
+          latestPricesMap.set(key, item);
+        }
+      }
+
+      const latestPrices = Array.from(latestPricesMap.values());
+
+      const promises = latestPrices.map(async ({ artic_pr, TPLIS, NULIS }) => {
+        const { data, error } = await supabase
+          .from('Precios')
+          .select(`
+            artic_pr,
+            TPLIS,
+            NULIS,
+            prec_bult,
+            Articulos(ARTIC, nombre, abrev)
+          `)
+          .eq('artic_pr', artic_pr)
+          .eq('TPLIS', TPLIS)
+          .eq('NULIS', NULIS)
+          .single();
+
+        if (error) console.error(error);
+        return data;
+      });
+
+      const precios = await Promise.all(promises);
+      console.log(precios)
+
+      
+      const preciosPorTplis = new Map<number, any[]>();
+
+      for (const precio of precios) {
+        if(precio){
+          const arr = preciosPorTplis.get(precio.TPLIS) ?? [];
+          arr.push(precio);
+          preciosPorTplis.set(precio.TPLIS, arr);
+        }
+      }
+
+    // Guardar en IndexedDB
+   
+    const db = await setUpDataBase();
+    const tx = db.transaction('RutaDeVisita', 'readwrite');
+
+    for (const cliente of clientesConDeudas) {
+          await tx.store.put(cliente);
+    }
+    await tx.done;
+    const txtx = db.transaction('Precios','readwrite');
+    const preciosStore = txtx.objectStore('Precios');
+
+    for (const [tplis, lista] of preciosPorTplis.entries()) {
+      await preciosStore.put({ TPLIS: tplis, articulos: lista });
+    }
+
+    await txtx;
+
+
+    setFormData({ numero: '', clave: '' });
+    sessionStorage.setItem('isLoggedIn', 'true');
+    router.push('/menu');
+  } catch (error) {
+    if (error instanceof Error) {
+      alert('Error al guardar los datos: ' + error.message);
+    }
+    console.error('Error al guardar datos:', error);
+  }
+};
+
+
+//   const saveData = async (e : React.FormEvent) => {
+//     e.preventDefault();
+    
+//     // const now = new Date().toISOString();
+//     const data = { 
+//       numero: Number(formData.numero), // Asegúrate de que sea un número
+//       clave : formData.clave,
+//       // email: formData.email,
+//       //created_at: now,
+//       //sincronizado: false
+//     };
+
+//     try {
+//       const vendedor = await login(data.numero,data.clave);
+//       console.log(vendedor)
+//       if (vendedor){
+//         alert('Datos guardados correctamente')
+//         //console.log(data.numero)
+//         const { data : rutaVisita, error } = await supabase
+//         .from('ClienteSucursal')
+//         .select(`
+//           nombre,orden_visita,CODCL,            
+//           RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id,dia),
+//           Direccion(calle,numero,latitud,longitud),
+//           email,notas,telefono,entrega_observaciones,TPLIS
+//           `)
+//         .eq('ruta_visita_id.numero_vend', data.numero)
+//         .not('RutaDeVisita', 'is', null) // Asegura que RutaDeVisita no sea null
+//         //.eq('ClienteFrecuencia.id_cliente', 'CODCL'); // Filtra para que solo coincidan los valores
+
+//         // console.log(rutaVisita)
+//           // acá faltaría traer la lista de precios, asi q sería recorrer y traer la lista de articulos de 
+          
+//         if (error) throw new Error(error.message);
+
+//         const clientesConDeudas = [];
+
+//         for (const cliente of rutaVisita) {
+//           const { data: deudas, error: deudasError } = await supabase
+//             .from('Deudas')
+//             .select(`*`)
+//             .eq('cliente', cliente.CODCL);
+          
+//           let articulos: ArticuloConPrecio[] = [];
+//           if (cliente.TPLIS) {
+//             const { data: precios, error: preciosError } = await supabase
+//             .from('Precios')
+//             .select(`
+//               prec_bult,              
+//               nulis,
+//               ARTIC,
+//               Articulos:artic_pr(ARTIC,nombre,abrev),
+//             `)
+//             .eq('TPLIS', cliente.TPLIS);
+
+          
+
+          
+//           if (deudasError) throw new Error(deudasError.message);
+// /*           console.log(cliente.CODCL);
+//           console.log(deudas); */
+//           // Agregar las deudas al cliente para almacenar en IndexedDB después
+//             clientesConDeudas.push({ ...cliente, deudas,precios });
+//         }
+
+
+//         // if (rutaVisita && rutaVisita.length > 0) {
+//           const db = await setUpDataBase();
+//           const tx = db.transaction('RutaDeVisita', 'readwrite');
+        
+//           for (const cliente of clientesConDeudas){
+//             await tx.store.put(cliente);
+//           }
+//           await tx.done;
+//         // }
+
+
+//         setFormData({numero : '', clave: ''});
+//         //setIsLoggedIn(true)
+        
+        
+//         sessionStorage.setItem('isLoggedIn', 'true');
+//         router.push('/menu');
+//       }
+
+//       // await eliminarBaseDeDatosCompleta()
+//     } catch (error) {
+//       if (error instanceof Error) { 
+//         alert('Error al guardar los datos: ' + error.message);
+//       }
+//       console.error('Error al guardar datos:', error);
+//     }
+//   };
 
   return (
     <div className="p-4">
