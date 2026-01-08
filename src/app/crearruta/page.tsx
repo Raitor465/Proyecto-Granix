@@ -25,6 +25,9 @@ export interface Cliente {
     telefono: string;
     notas: string;
     entrega_observaciones: string;
+    Bonificaciones: {Bon_general : string , BG_porc : Float16Array}
+    BonificacionesEspeciales: {NOMBR: string , PBOND : Float16Array}
+    PercepcionesIva: {PIVAANO : Float16Array}
 }
 
 interface RutaInfo{

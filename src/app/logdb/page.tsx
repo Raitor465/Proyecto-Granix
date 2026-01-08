@@ -188,7 +188,10 @@ const OfflineFirstForm: React.FC = () => {
         nombre, orden_visita, CODCL, TPLIS,
         RutaDeVisita:ruta_visita_id(nombre, ruta_visita_id, dia),
         Direccion(calle, numero, latitud, longitud),
-        email, notas, telefono, entrega_observaciones
+        email, notas, telefono, entrega_observaciones,
+        Bonificaciones:CODCA (CODCA_bon,BG_porc),
+        BonificacionesEspeciales:CBOND (NOMBR,PBOND),
+        PercepcionesIva:PERCE(PIVAANO)
       `)
       .eq('ruta_visita_id.numero_vend', data.numero)
       .not('RutaDeVisita', 'is', null);
@@ -196,7 +199,7 @@ const OfflineFirstForm: React.FC = () => {
     if (error) throw new Error(error.message);
 
     const clientesConDeudas: any[] = [];
-
+    console.log(rutaVisita)
     for (const cliente of rutaVisita) {
       const { data: deudas, error: deudasError } = await supabase
         .from('Deudas')
@@ -240,7 +243,7 @@ const OfflineFirstForm: React.FC = () => {
             TPLIS,
             NULIS,
             prec_bult,
-            Articulos(ARTIC, nombre, abrev)
+            Articulos(ARTIC, nombre, abrev,Ivas(porc))
           `)
           .eq('artic_pr', artic_pr)
           .eq('TPLIS', TPLIS)
