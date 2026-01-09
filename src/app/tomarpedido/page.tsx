@@ -25,24 +25,60 @@ interface Precio {
   
 export default function TomarPedido() {
     const [busqueda, setBusqueda] = useState("");
-    const [bonificacionGeneral, setBonificacionGeneral] = useState<number>(0);  // Corregido tipo a número
     const [sugerencias, setSugerencias] = useState<any[]>([]);
     const [listaFiltrada, setListaFiltrada] = useState<any[]>([]);
     const [articuloSeleccionado, setArticuloSeleccionado] = useState<any | null>(null);
-    const [cantidad, setCantidad] = useState<number | "">("");
-    const [bonificacionItem, setBonificacionItem] = useState<number | "">(""); // Nuevo estado para la bonificación específica del artículo
-    const [bonoficacionEsp, setbonoficacionEsp] = useState<number | "">(""); 
-    const [porcentajeIva, setPorcentajeIva] = useState<Float16Array>(); 
-    const [IVAArticulo, setIVA] = useState<Float16Array>(); 
     const [mensaje, setMensaje] = useState<string | null>(null); // Estado para mostrar mensaje de éxito/error
+    
+    const [cantidad, setCantidad] = useState<number | "">("");
+    const [bonificacionGeneral, setBonificacionGeneral] = useState<string>("");  // Corregido tipo a número
+    const [bonificacionItem, setBonificacionItem] = useState<string>(""); // Nuevo estado para la bonificación específica del artículo
+    const [bonoficacionEsp, setbonoficacionEsp] = useState<string>(); 
+    const [porcentajeIva, setPorcentajeIva] = useState<number>(0); 
+    const [IVAArticulo, setIVA] = useState<number>(0); 
+    
     const [total, setTotal] = useState<number>(0);
     const [carrito, setCarrito] = useState< { articulo: any; cantidad: number; subtotal: number;  valorConPorIva : number}[]>([]);
-    const [valorConPorIva, setvalorConPorIva] = useState<Number>(0);
+    const [totalIva, setTotalIva] = useState<number>(0);
+    const [totalSinImpuesto, setTotalSinImpuesto] = useState<number>(0);
+    const [totalPIva, setTotalPIva] = useState<number>(0);
+    const [totalBonGen, setTotalBonGen] = useState<number>(0);
+    const [totalBonCompleto, setTotalBonCompleto] = useState<number>(0);
 
 useEffect(() => {
-  const suma = carrito.reduce((acc, item) => acc + item.subtotal + item.valorConPorIva - item.subtotal * ((Number(bonificacionGeneral) + Number(bonoficacionEsp))/100) , 0);
-  setTotal(suma);
-}, [carrito]);
+    const bonGen = Number(bonificacionGeneral) || 0;
+    const bonItem = Number(bonificacionItem) || 0;
+    const bonEsp = Number(bonoficacionEsp) || 0;
+
+    let suma = 0;
+    let sinImp = 0;
+    let iva = 0;
+    let pIva = 0;
+    let bonG = 0;
+    let bonT = 0;
+
+    for (const car of carrito) {
+      suma +=
+        car.subtotal +
+        car.valorConPorIva -
+        car.subtotal * ((bonGen + bonEsp) / 100);
+
+      sinImp += car.subtotal - car.subtotal * (IVAArticulo / 100);
+      iva += car.subtotal * (IVAArticulo / 100);
+      pIva += car.subtotal * (porcentajeIva / 100);
+      bonG += car.subtotal * (bonGen / 100);
+      bonT += car.subtotal * ((bonGen + bonEsp) / 100);
+    }
+
+    setTotal(suma);
+    setTotalSinImpuesto(sinImp);
+    setTotalIva(iva);
+    setTotalPIva(pIva);
+    setTotalBonGen(bonG);
+    setTotalBonCompleto(bonT);
+
+  
+}, [carrito,bonificacionGeneral,bonificacionItem,bonoficacionEsp]);
 
     useEffect(() => {
  
@@ -52,7 +88,6 @@ useEffect(() => {
         const db = await setUpDataBase();
         const txClienteSelect = db.transaction("ClienteSucursal","readonly")
 
-        //const tx = db.transaction('Precios', 'readonly');
         const storeCliente = txClienteSelect.store;
         const cliente = await storeCliente.getAll();
         const tplis = cliente[0].TPLIS
@@ -61,13 +96,11 @@ useEffect(() => {
             console.error("No se encontró el TPLIS del cliente");
             return;
           }
-          //setBon(cliente[0].BG_porc);
           setBonificacionGeneral(cliente[0]?.Bonificaciones?.BG_porc ?? 0);
-          setbonoficacionEsp(cliente[0]?.BonificacionesEspeciales?.PBOND ?? 0);
+          setbonoficacionEsp(cliente[0]?.BonificacionesEspeciales?.PBOND);
           setPorcentajeIva(cliente[0]?.PercepcionesIva?.PIVAANO ?? 0)
           console.log(cliente[0])
           console.log(cliente[0]?.PercepcionesIva?.PIVAANO) 
-          // Ahora filtramos artículos por ese TPLIS
     const txArticulos = db.transaction("Precios", "readonly");
     const storeArticulo = txArticulos.store;
 
@@ -77,7 +110,6 @@ useEffect(() => {
         (art: any) => art.TPLIS === tplis
       );
         setListaFiltrada(articulosFiltrados[0].articulos); // o lo que necesites
-        //console.log(articulosFiltrados[0].articulos)
       };
       obtenerArticulosPorCliente();
   },[]);
@@ -92,15 +124,12 @@ useEffect(() => {
     const codigo = String(articulo.artic_pr ?? "");
     return codigo.includes(texto);
   });
-    console.log(sugerenciasFiltradas)
     setSugerencias(sugerenciasFiltradas);
   };
 
   const handleSeleccionArticulo = (articulo: any) => {
     setBusqueda(articulo.Articulos?.ARTIC || "");
     setArticuloSeleccionado(articulo); // Guardamos el artículo seleccionado
-    console.log(articulo)
-    console.log(articulo.Articulos.Ivas.porc)
     setIVA(articulo.Articulos?.Ivas?.porc)
     setSugerencias([]);
     };
@@ -129,7 +158,7 @@ useEffect(() => {
     };
     
     setCarrito((prev) => [...prev, item]);
-    setvalorConPorIva(subtotalBase * (Number(porcentajeIva)/100))
+    //setvalorConPorIva(subtotalBase * (Number(porcentajeIva)/100))
     setBusqueda("");
     setArticuloSeleccionado(null);
     setCantidad("");
@@ -210,7 +239,7 @@ useEffect(() => {
             className="w-full border border-gray-300 rounded p-2 mt-1"
             placeholder="Ingrese bulto"
             value={cantidad}
-            onChange={(e) => setCantidad(Number(e.target.value) || "")}
+            onChange={(e) => setCantidad(e.target.value === "" ? "" : Number(e.target.value))}
             />
         </div>
         <div>
@@ -219,28 +248,33 @@ useEffect(() => {
             type="text"
             className="w-full border border-gray-300 rounded p-2 mt-1"
             value={bonificacionGeneral}
-            onChange={(e) =>
-            setBonificacionGeneral(Number(e.target.value))}
+            onChange={(e) => {
+              setBonificacionGeneral(e.target.value.replace(",", "."));
+            }}
             />
         </div>
         <div>
           <label className="block text-gray-700 font-medium">Bon. Item (%)</label>
           <input
-            type="number"
+            type="text"
             className="w-full border border-gray-300 rounded p-2 mt-1"
             placeholder="Ingrese x item"
             value={bonificacionItem}
-            onChange={(e) => setBonificacionItem(Number(e.target.value) || "")}
+            onChange={(e) => { 
+              setBonificacionItem(e.target.value.replace(",","."))
+            }
+            }
+            
           />
         </div>
 
         <div>
           <label className="block text-gray-700 font-medium">Bon. Rotura (%)</label>
           <input
-            type="number"
+            type="text"
             className="w-full border border-gray-300 rounded p-2 mt-1"
             value={bonoficacionEsp}
-            onChange={(e) => setbonoficacionEsp(Number(e.target.value) || "")}
+            onChange={(e) => {setbonoficacionEsp(e.target.value.replace(",","."));}}
           />
         </div>
 
@@ -295,7 +329,65 @@ useEffect(() => {
         </button>
 
       </div>
+      <div className="overflow-x-auto">
+        <table className="w-full table-auto border-collapse border border-gray-300 text-center">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="border border-gray-300 p-2">Sim imp</th>
+              <th className="border border-gray-300 p-2">IVA</th> 
+              <th className="border border-gray-300 p-2">P IVA</th> 
+              
+               {Number(bonificacionGeneral) !== 0 && total !== 0 && ( 
+                <>
+                <th className="border border-gray-300 p-2">Bonificacion General</th> 
+               </>
+               )}
 
+               {(Number(bonificacionGeneral) !== 0 || Number(bonificacionItem) !== 0 || Number(bonoficacionEsp) !==0) && total !== 0 && (
+              <th className="border border-gray-300 p-2">Boni Total</th> )
+               }
+
+              <th className="border border-gray-300 p-2">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+              <tr>
+                
+                <td className="border border-gray-300 p-2"> 
+                  {totalSinImpuesto.toFixed(2)}
+                </td>
+                <td className="border border-gray-300 p-2"> 
+                  {totalIva.toFixed(2)}
+                </td>
+                <td className="border border-gray-300 p-2"> 
+                  {totalPIva.toFixed(2)}
+                </td>
+                
+                {Number(bonificacionGeneral) !== 0 && total !== 0 && ( 
+                <>
+                <td className="border border-gray-300 p-2"> 
+                  {totalBonGen.toFixed(2)}
+                </td>
+                
+
+                
+                </>
+                )}
+                
+                {(Number(bonoficacionEsp) !== 0 || Number(bonificacionItem) !== 0 || Number(bonificacionGeneral) !== 0) && total !== 0 && (
+                <>
+                <td className="border border-gray-300 p-2"> 
+                  {totalBonCompleto.toFixed(2)}
+                </td>
+                </>
+                )}
+                <td className="border border-gray-300 p-2"> 
+                  {total.toFixed(2)}
+                </td>              
+              </tr>
+          </tbody>
+        </table>
+      </div>
       {/* Tabla */}
       <div className="overflow-x-auto">
         <table className="w-full table-auto border-collapse border border-gray-300 text-center">
@@ -303,12 +395,9 @@ useEffect(() => {
             <tr className="bg-gray-200">
               <th className="border border-gray-300 p-2">Artículos</th>
               <th className="border border-gray-300 p-2">Bulto</th>
-              <th className="border border-gray-300 p-2">Sim imp</th>
-              <th className="border border-gray-300 p-2">IVA</th> 
-              <th className="border border-gray-300 p-2">P IVA</th> 
-              <th className="border border-gray-300 p-2">Bonificacion General</th> 
-              <th className="border border-gray-300 p-2">Boni Total</th> 
-              <th className="border border-gray-300 p-2">Subtotal</th> 
+              <th className="border border-gray-300 p-2"></th>
+
+              
             </tr>
           </thead>
           <tbody>
@@ -318,28 +407,7 @@ useEffect(() => {
                 {item.articulo.Articulos.nombre}
               </td>
               <td className="border border-gray-300 p-2">{item.cantidad}</td>
-              <td className="border border-gray-300 p-2">
-               ${(item.subtotal - (item.subtotal * (Number(IVAArticulo)/100))).toFixed(2)}
-              </td>
-              <td className="border border-gray-300 p-2">
-                
-                ${(item.subtotal * (Number(IVAArticulo)/100)).toFixed(2)}
-              </td>
-
-              <td className="border border-gray-300 p-2">                
-                ${(item.subtotal * (Number(porcentajeIva)/100)).toFixed(2)}
-              </td>
-
-              <td className="border border-gray-300 p-2">                
-                ${(item.subtotal * (Number(bonificacionGeneral)/100)).toFixed(2)}
-              </td>
-              <td className="border border-gray-300 p-2">                
-                ${(item.subtotal * ((Number(bonificacionGeneral) + Number(bonoficacionEsp))/100)).toFixed(2)}
-              </td>
-
-              <td className="border border-gray-300 p-2">                
-                ${( (item.subtotal) + (item.subtotal * (Number(porcentajeIva)/100)) - (item.subtotal * ((Number(bonificacionGeneral) + Number(bonoficacionEsp))/100))).toFixed(2)}
-              </td>
+              
 
               <td className="border border-gray-300 p-2">
                   <button
@@ -353,12 +421,12 @@ useEffect(() => {
           ))}
         </tbody>
           <tfoot>
-            <tr>
+            {/* <tr>
               <td colSpan={6} className="font-bold text-right pr-4">
                 Total:
               </td>
               <td>${(total).toFixed(2)}</td>
-            </tr>
+            </tr> */}
           </tfoot>
         </table>
       </div>
