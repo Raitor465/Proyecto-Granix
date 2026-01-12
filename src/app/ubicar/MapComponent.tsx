@@ -68,7 +68,7 @@ const MapComponent = ({ location, center, zoom }: MapComponentProps) => {
         mapRef.current = null;
       }
     };
-  }, [location, center, zoom]);
+  }, [location.latitude, location.longitude, center, zoom]);
 
   return <div ref={mapContainerRef} className="h-full w-full" />;
 };

@@ -15,23 +15,28 @@ export async function eliminarBaseDeDatosCompleta() {
 }
 
 export async function setUpDataBase() {
-    if (!db){
-        db = await openDB(dbName,dbVersion, {
-            upgrade(database) {
-            database.createObjectStore('Vendedor', { keyPath: 'numero' });
-            
-            database.createObjectStore('RutaDeVisita', { keyPath: 'id', autoIncrement: true });
-            
-            database.createObjectStore('ClienteSucursal', {keyPath : 'CODCL'})
-            
-            database.createObjectStore('Direccion', {keyPath : 'direccion_id'})
-
-            database.createObjectStore('Precios', { keyPath: 'TPLIS' });
-
-            console.log('Base de datos creada o abierta exitosamente.');
-         },
-        })
+    // Siempre reabrir la base de datos para asegurar datos frescos
+    if (db) {
+        db.close();
+        db = null;
     }
+    
+    db = await openDB(dbName,dbVersion, {
+        upgrade(database) {
+        database.createObjectStore('Vendedor', { keyPath: 'numero' });
+        
+        database.createObjectStore('RutaDeVisita', { keyPath: 'id', autoIncrement: true });
+        
+        database.createObjectStore('ClienteSucursal', {keyPath : 'CODCL'})
+        
+        database.createObjectStore('Direccion', {keyPath : 'direccion_id'})
+
+        database.createObjectStore('Precios', { keyPath: 'TPLIS' });
+
+        console.log('Base de datos creada o abierta exitosamente.');
+     },
+    })
+    
     return db;
 }
 
