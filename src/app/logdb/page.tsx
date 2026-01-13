@@ -174,6 +174,13 @@ const OfflineFirstForm: React.FC = () => {
       if (vendedor) {
         alert('Datos guardados correctamente')
         //console.log(data.numero)
+        // NOTE: Using !ClienteSucursal_CODBO_fkey to specify which foreign key to use
+        // when there are multiple relationships between ClienteSucursal and Bonificaciones.
+        // If this causes an error, check the actual foreign key constraint name in your database
+        // and update accordingly. Common alternatives:
+        // - Bonificaciones!ClienteSucursal_bonificacion_id_fkey(...)
+        // - Bonificaciones!ClienteSucursal_bonif_id_fkey(...)
+        // - Or use column hint: bonificacion_id:Bonificaciones(...)
         const { data: rutaVisita, error } = await supabase
           .from('ClienteSucursal')
           .select(`
