@@ -92,7 +92,7 @@ CODBO:Bonificaciones(Bon_general, BG_porc)
 
 ## Related Code
 The same pattern may need to be applied in other files if they have similar queries:
-- `/src/app/tomarpedido/page.tsx` - Line 153 (currently commented out, but would need fixing if uncommented in the future)
+- `/src/app/tomarpedido/page.tsx` - Lines 148-169 contains a commented-out function `fetchBonificaciones` with a similar query on line 153 that would need the same fix if uncommented in the future
 
 ## Testing
 To verify the fix works:
