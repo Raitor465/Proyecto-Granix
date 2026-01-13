@@ -180,7 +180,7 @@ const OfflineFirstForm: React.FC = () => {
           nombre,orden_visita,CODCL,            
           RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id),
           Direccion(calle,numero),
-          Bonificaciones(Bon_general, BG_porc),
+          Bonificaciones!ClienteSucursal_CODBO_fkey(Bon_general, BG_porc),
           lista, 
           email, 
           notas, 
