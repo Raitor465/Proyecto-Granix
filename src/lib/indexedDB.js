@@ -28,6 +28,10 @@ export async function setUpDataBase() {
 
             database.createObjectStore('Precios', { keyPath: 'TPLIS' });
 
+            const pedidoStore = database.createObjectStore('Pedido', {keyPath: 'id', autoIncrement:true})
+            pedidoStore.createIndex("clienteId","clienteId", {unique : true })
+            
+
             console.log('Base de datos creada o abierta exitosamente.');
          },
         })

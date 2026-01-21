@@ -1,27 +1,8 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Data } from '@react-google-maps/api';
 import {setUpDataBase} from '@/lib/indexedDB';
-import { BookDownIcon } from 'lucide-react';
 
-interface Precio {
-    artic_pr: number;
-    prec_bult: number;
-  }
-  
-  interface Articulo {
-    id: number;
-    artic: number;
-    nombre: string;
-    abrev: string;
-    CODIM_art: number;
-    Precios: Precio;
-    Ivas: {
-       porc: number; // El porcentaje de IVA asociado
-    };
-  }
   
 export default function TomarPedido() {
     const [busqueda, setBusqueda] = useState("");
@@ -33,12 +14,12 @@ export default function TomarPedido() {
     const [cantidad, setCantidad] = useState<number | "">("");
     const [bonificacionGeneral, setBonificacionGeneral] = useState<string>("");  // Corregido tipo a número
     const [bonificacionItem, setBonificacionItem] = useState<string>(""); // Nuevo estado para la bonificación específica del artículo
-    const [bonoficacionEsp, setbonoficacionEsp] = useState<string>(); 
+    const [bonoficacionEsp, setbonoficacionEsp] = useState<string>(""); 
     const [porcentajeIva, setPorcentajeIva] = useState<number>(0); 
     const [IVAArticulo, setIVA] = useState<number>(0); 
     
     const [total, setTotal] = useState<number>(0);
-    const [carrito, setCarrito] = useState< { articulo: any; cantidad: number; subtotal: number;  valorConPorIva : number}[]>([]);
+    const [carrito, setCarrito] = useState< { articulo: any; cantidad: number; subtotal: number;  valorConPorIva : number; bonificacionItem: number, IVA : number}[]>([]);
     const [totalIva, setTotalIva] = useState<number>(0);
     const [totalSinImpuesto, setTotalSinImpuesto] = useState<number>(0);
     const [totalPIva, setTotalPIva] = useState<number>(0);
@@ -47,7 +28,6 @@ export default function TomarPedido() {
 
 useEffect(() => {
     const bonGen = Number(bonificacionGeneral) || 0;
-    const bonItem = Number(bonificacionItem) || 0;
     const bonEsp = Number(bonoficacionEsp) || 0;
 
     let suma = 0;
@@ -63,13 +43,13 @@ useEffect(() => {
         car.valorConPorIva -
         car.subtotal * ((bonGen + bonEsp) / 100);
 
-      sinImp += car.subtotal - car.subtotal * (IVAArticulo / 100);
-      iva += car.subtotal * (IVAArticulo / 100);
+      sinImp += car.subtotal - car.subtotal * (car.IVA / 100);
+      iva += car.subtotal * (car.IVA / 100);
       pIva += car.subtotal * (porcentajeIva / 100);
       bonG += car.subtotal * (bonGen / 100);
-      bonT += car.subtotal * ((bonGen + bonEsp) / 100);
+      bonT = bonT + car.subtotal * ((bonGen + bonEsp) / 100) + car.bonificacionItem;
     }
-
+    //console.log(bonT)
     setTotal(suma);
     setTotalSinImpuesto(sinImp);
     setTotalIva(iva);
@@ -78,43 +58,122 @@ useEffect(() => {
     setTotalBonCompleto(bonT);
 
   
-}, [carrito,bonificacionGeneral,bonificacionItem,bonoficacionEsp]);
+}, [carrito,bonificacionGeneral,bonoficacionEsp]);
+
+  const calcularTotales = ({
+    carrito,
+    bonGen,
+    bonEsp,
+    porcentajeIva,
+    IVAArticulo,
+  }: any) => {
+    let total = 0;
+    let sinImp = 0;
+    let iva = 0;
+    let pIva = 0;
+    let bonG = 0;
+    let bonT = 0;
+
+    for (const car of carrito) {
+      total +=
+        car.subtotal +
+        car.valorConPorIva -
+        car.subtotal * ((bonGen + bonEsp) / 100);
+
+      sinImp += car.subtotal - car.subtotal * (car.IVA / 100);
+      iva += car.subtotal * (car.IVA / 100);
+      pIva += car.subtotal * (porcentajeIva / 100);
+      bonG += car.subtotal * (bonGen / 100);
+      bonT +=
+        car.subtotal * ((bonGen + bonEsp) / 100) +
+        car.bonificacionItem;
+    }
+
+    return {
+      total,
+      totalSinImpuesto: Number(sinImp.toFixed(2)),
+      totalIva: Number(iva.toFixed(2)),
+      totalPIva: Number(pIva.toFixed(2)),
+      totalBonGen: Number(bonG.toFixed(2)),
+      totalBonCompleto: Number(bonT.toFixed(2)),
+    };
+  };
+
+  const obtenerClienteActual = async () =>{
+    const db = await setUpDataBase();
+    const txClienteSelect = db.transaction("ClienteSucursal","readonly")
+
+        const storeCliente = txClienteSelect.store;
+        const clientes = await storeCliente.getAll();
+        
+        if (!clientes.length){
+          console.error("No se encontró cliente")
+          return null;
+        }
+
+        const cliente = clientes[0]
+        const tplis = cliente.TPLIS
+        
+        if (!tplis) {
+          console.error("No se encontró el TPLIS del cliente");
+          return null
+        }
+
+        return {
+          db,cliente,tplis
+        }
+      
+  }
 
     useEffect(() => {
  
     const obtenerArticulosPorCliente = async () => {
+        const data = await obtenerClienteActual();
 
+        if (!data) return ;
 
-        const db = await setUpDataBase();
-        const txClienteSelect = db.transaction("ClienteSucursal","readonly")
-
-        const storeCliente = txClienteSelect.store;
-        const cliente = await storeCliente.getAll();
-        const tplis = cliente[0].TPLIS
+        const {db, cliente, tplis} = data
         
-          if (!tplis) {
-            console.error("No se encontró el TPLIS del cliente");
-            return;
-          }
-          setBonificacionGeneral(cliente[0]?.Bonificaciones?.BG_porc ?? 0);
-          setbonoficacionEsp(cliente[0]?.BonificacionesEspeciales?.PBOND);
-          setPorcentajeIva(cliente[0]?.PercepcionesIva?.PIVAANO ?? 0)
-          console.log(cliente[0])
-          console.log(cliente[0]?.PercepcionesIva?.PIVAANO) 
-    const txArticulos = db.transaction("Precios", "readonly");
-    const storeArticulo = txArticulos.store;
 
-    const todosLosArticulos = await storeArticulo.getAll();
-
-     const articulosFiltrados = todosLosArticulos.filter(
-        (art: any) => art.TPLIS === tplis
-      );
+        //console.log(cliente)
+        //console.log(cliente?.PercepcionesIva?.PIVAANO) 
+        const txArticulos = db.transaction("Precios", "readonly");
+        const storeArticulo = txArticulos.store;
+        const todosLosArticulos = await storeArticulo.getAll();
+        await txArticulos.done 
+        const articulosFiltrados = todosLosArticulos.filter(
+          (art: any) => art.TPLIS === tplis);
         setListaFiltrada(articulosFiltrados[0].articulos); // o lo que necesites
-      };
+        
+        const txPedido = db.transaction("Pedido", "readonly");
+        const store = txPedido.objectStore("Pedido");
+        const index = store.index("clienteId");
+        const pedido = await index.get(cliente.CODCL);
+        await txPedido.done;
+        if (pedido) {
+          setCarrito(pedido.carrito || []);
+          setBonificacionGeneral(pedido.bonificaciones?.general ?? "");
+          setbonoficacionEsp(pedido.bonificaciones?.especial ?? "");
+          //setIVA(pedido.carrito.)
+        }else{
+            setBonificacionGeneral(cliente?.Bonificaciones?.BG_porc);
+            setbonoficacionEsp(cliente?.BonificacionesEspeciales?.PBOND);
+        }
+        setPorcentajeIva(cliente?.PercepcionesIva?.PIVAANO ?? 0)
+      };       
       obtenerArticulosPorCliente();
   },[]);
 
+  const normalizarNumero = (valor : string) => {
+    const v = valor.replace(",",".");
 
+    if (!/^\d*\.?\d*$/.test(v)) return null;
+    return v;
+  }
+
+  const sumaBonificaciones = ( bg : string , bi : string , be: string) => {
+      return ( Number(bg || 0 ) + Number (bi || 0 ) + Number (be || 0))
+  }
   
  const handleBusqueda = (e: React.ChangeEvent<HTMLInputElement>) => {
     const texto = e.target.value;
@@ -134,8 +193,6 @@ useEffect(() => {
     setSugerencias([]);
     };
 
-
-
   const handleAgregarArticulo = () => {
     if (!articuloSeleccionado) {
       setMensaje("Seleccioná un artículo primero");
@@ -145,20 +202,19 @@ useEffect(() => {
       setMensaje("Ingresá una cantidad válida");
       return;
     }
-    console.log(porcentajeIva);
     const cant = Number(cantidad);
-    const precioUnitario = articuloSeleccionado.prec_bult  //+ (articuloSeleccionado.prec_bult * Number(porcentajeIva) / 100);
+    const precioUnitario = articuloSeleccionado.prec_bult
     const subtotalBase = (precioUnitario - precioUnitario * (Number(bonificacionItem)/100)) * cant;
-
     const item = {
       articulo: articuloSeleccionado,
       cantidad: cant,
       subtotal : subtotalBase,
       valorConPorIva : subtotalBase * (Number(porcentajeIva)/100),
+      bonificacionItem : precioUnitario * (Number(bonificacionItem)/100),
+      IVA : IVAArticulo
     };
     
     setCarrito((prev) => [...prev, item]);
-    //setvalorConPorIva(subtotalBase * (Number(porcentajeIva)/100))
     setBusqueda("");
     setArticuloSeleccionado(null);
     setCantidad("");
@@ -181,6 +237,65 @@ useEffect(() => {
       // que pidio tantos articulos tanto bulto con tal precio.
       // carrito y con eso habilitado para la deuda.
 
+    };
+
+
+    const handleGuardarLocal = async () => {
+      try{
+        const data = await obtenerClienteActual()
+        if (!data) return ;
+
+        const {db , cliente} = data
+
+        //const db = await setUpDataBase()
+
+      
+
+        const tx = db.transaction("Pedido","readwrite")
+        const store = tx.objectStore("Pedido")
+        const index = store.index("clienteId")
+        const clienteId = cliente.CODCL
+
+        const pedidoExistente = await index.get(clienteId)
+
+        if (carrito.length === 0){
+          if (pedidoExistente){
+            await store.delete(pedidoExistente.id)
+            setMensaje("Pedido eliminado (carrito vacío)")
+          }
+          await tx.done
+          return;
+        }
+        const bonGen = Number(bonificacionGeneral) || 0;
+        const bonEsp = Number(bonoficacionEsp) || 0;
+
+        const totales = calcularTotales({
+          carrito,bonGen,bonEsp,porcentajeIva,IVAArticulo
+        });
+
+        const pedido = {
+          clienteId : cliente.CODCL,
+          carrito,
+          bonificaciones : {
+            general : bonificacionGeneral,
+            //item : bonificacionItem,
+            especial : bonoficacionEsp,
+          },
+          totales,
+          fecha : Date.now(),
+        }
+
+        if (pedidoExistente){
+          await store.put({ ...pedidoExistente,...pedido, id:pedidoExistente.id})          
+        }else{
+          await store.add({...pedido})
+        }
+        //store.put(pedido)
+        await tx.done;
+      }catch(err){
+        console.error(err)
+        setMensaje("Error al guardar al pedido")
+      }
     };
   
     return (
@@ -247,9 +362,16 @@ useEffect(() => {
         <input
             type="text"
             className="w-full border border-gray-300 rounded p-2 mt-1"
+            placeholder='Ingresar Bonificación General'
             value={bonificacionGeneral}
             onChange={(e) => {
-              setBonificacionGeneral(e.target.value.replace(",", "."));
+              const v = normalizarNumero(e.target.value);
+              if (v === null) return;
+              if (sumaBonificaciones(v,bonificacionItem , bonoficacionEsp) > 100) {
+                  setMensaje("La suma de bonificaciones no puede superar el 100%");
+                  return;
+              }
+              setBonificacionGeneral(v);
             }}
             />
         </div>
@@ -258,10 +380,16 @@ useEffect(() => {
           <input
             type="text"
             className="w-full border border-gray-300 rounded p-2 mt-1"
-            placeholder="Ingrese x item"
+            placeholder="Ingrese Bonificacion por Item"
             value={bonificacionItem}
             onChange={(e) => { 
-              setBonificacionItem(e.target.value.replace(",","."))
+              const v = normalizarNumero(e.target.value);
+              if (v === null) return;
+              if (sumaBonificaciones(v,bonificacionItem , bonoficacionEsp) > 100) {
+                  setMensaje("La suma de bonificaciones no puede superar el 100%");
+                  return;
+              }
+              setBonificacionItem(v);
             }
             }
             
@@ -274,7 +402,16 @@ useEffect(() => {
             type="text"
             className="w-full border border-gray-300 rounded p-2 mt-1"
             value={bonoficacionEsp}
-            onChange={(e) => {setbonoficacionEsp(e.target.value.replace(",","."));}}
+            placeholder='Ingresar Bonficacion Especial'
+            onChange={(e) => {
+              const v = normalizarNumero(e.target.value);
+              if (v === null) return;
+              if (sumaBonificaciones(v,bonificacionItem , bonoficacionEsp) > 100) {
+                  setMensaje("La suma de bonificaciones no puede superar el 100%");
+                  return;
+              }
+              setbonoficacionEsp(v);
+            }}
           />
         </div>
 
@@ -343,7 +480,7 @@ useEffect(() => {
                </>
                )}
 
-               {(Number(bonificacionGeneral) !== 0 || Number(bonificacionItem) !== 0 || Number(bonoficacionEsp) !==0) && total !== 0 && (
+               {(Number(bonificacionGeneral) !== 0 || Number(bonoficacionEsp) !==0  || totalBonCompleto !== 0)   && total !== 0 && (
               <th className="border border-gray-300 p-2">Boni Total</th> )
                }
 
@@ -368,13 +505,10 @@ useEffect(() => {
                 <td className="border border-gray-300 p-2"> 
                   {totalBonGen.toFixed(2)}
                 </td>
-                
-
-                
                 </>
                 )}
                 
-                {(Number(bonoficacionEsp) !== 0 || Number(bonificacionItem) !== 0 || Number(bonificacionGeneral) !== 0) && total !== 0 && (
+                {(Number(bonoficacionEsp) !== 0 || Number(bonificacionGeneral) !== 0 || totalBonCompleto !== 0) && total !== 0 && (
                 <>
                 <td className="border border-gray-300 p-2"> 
                   {totalBonCompleto.toFixed(2)}
@@ -433,7 +567,7 @@ useEffect(() => {
 
       {/* Botones */}
       <div className="flex justify-center gap-4 mt-8">
-      <button className="bg-black text-white px-6 py-2 rounded-lg font-bold">
+        <button className="bg-black text-white px-6 py-2 rounded-lg font-bold">
           Volver
         </button>
         <button
@@ -442,6 +576,16 @@ useEffect(() => {
         >
           Cancelar
         </button>
+
+        <button 
+          onClick={handleGuardarLocal}
+          // Llama a la función que vacía el carrito
+          className="bg-black text-white px-6 py-2 rounded-lg font-bold"
+        >
+          Guardar
+        </button>
+
+        
         <button
           // Guarda el pedido
           className="bg-black text-white px-6 py-2 rounded-lg font-bold"
