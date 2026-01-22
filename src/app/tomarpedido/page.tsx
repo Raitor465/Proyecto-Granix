@@ -12,11 +12,11 @@ export default function TomarPedido() {
     const [sugerencias, setSugerencias] = useState<any[]>([]);
     const [listaFiltrada, setListaFiltrada] = useState<any[]>([]);
     const [articuloSeleccionado, setArticuloSeleccionado] = useState<any | null>(null);
-    const [mensaje, setMensaje] = useState<string | null>(null); // Estado para mostrar mensaje de éxito/error
+    const [mensaje, setMensaje] = useState<string | null>(null);
     
     const [cantidad, setCantidad] = useState<number | "">("");
-    const [bonificacionGeneral, setBonificacionGeneral] = useState<string>("");  // Corregido tipo a número
-    const [bonificacionItem, setBonificacionItem] = useState<string>(""); // Nuevo estado para la bonificación específica del artículo
+    const [bonificacionGeneral, setBonificacionGeneral] = useState<string>("");
+    const [bonificacionItem, setBonificacionItem] = useState<string>("");
     const [bonoficacionEsp, setbonoficacionEsp] = useState<string>(""); 
     const [porcentajeIva, setPorcentajeIva] = useState<number>(0); 
     const [IVAArticulo, setIVA] = useState<number>(0); 
@@ -137,17 +137,14 @@ useEffect(() => {
 
         const {db, cliente, tplis} = data
         
-
-        //console.log(cliente)
-        //console.log(cliente?.PercepcionesIva?.PIVAANO) 
         const txArticulos = db.transaction("Precios", "readonly");
         const storeArticulo = txArticulos.store;
         const todosLosArticulos = await storeArticulo.getAll();
         await txArticulos.done 
         const articulosFiltrados = todosLosArticulos.filter(
           (art: any) => art.TPLIS === tplis);
-        setListaFiltrada(articulosFiltrados[0].articulos); // o lo que necesites
-        
+        setListaFiltrada(articulosFiltrados[0].articulos); 
+
         const txPedido = db.transaction("Pedido", "readonly");
         const store = txPedido.objectStore("Pedido");
         const index = store.index("clienteId");
@@ -157,7 +154,6 @@ useEffect(() => {
           setCarrito(pedido.carrito || []);
           setBonificacionGeneral(pedido.bonificaciones?.general ?? "");
           setbonoficacionEsp(pedido.bonificaciones?.especial ?? "");
-          //setIVA(pedido.carrito.)
         }else{
             setBonificacionGeneral(cliente?.Bonificaciones?.BG_porc);
             setbonoficacionEsp(cliente?.BonificacionesEspeciales?.PBOND);
@@ -253,9 +249,7 @@ useEffect(() => {
   
   // Función para borrar todo el carrito
     const handleCancelar = async () => {
-      setCarrito([]); // Limpia el carrito
-
-
+      setCarrito([]);
        const data = await obtenerClienteActual()
         if (!data) return ;
 
@@ -277,8 +271,7 @@ useEffect(() => {
 
     // Función para borrar un artículo específico del carrito
     const handleBorrarItem = (index: number) => {
-      setCarrito((prev: any[]) => prev.filter((_: any, i: number) => i !== index)); // Elimina el artículo por índice
-
+      setCarrito((prev: any[]) => prev.filter((_: any, i: number) => i !== index)); 
       if (editandoIndex === index){
         setArticuloSeleccionado(null)
         setCantidad("")
@@ -335,7 +328,6 @@ useEffect(() => {
           carrito,
           bonificaciones : {
             general : bonificacionGeneral,
-            //item : bonificacionItem,
             especial : bonoficacionEsp,
           },
           totales,
@@ -347,7 +339,6 @@ useEffect(() => {
         }else{
           await store.add({...pedido})
         }
-        //store.put(pedido)
         await tx.done;
       }catch(err){
         console.error(err)
@@ -607,8 +598,6 @@ useEffect(() => {
               <th className="border border-gray-300 p-2">Artículos</th>
               <th className="border border-gray-300 p-2">Bulto</th>
               <th className="border border-gray-300 p-2"></th>
-
-              
             </tr>
           </thead>
           <tbody>
@@ -618,22 +607,22 @@ useEffect(() => {
                 {item.articulo.Articulos.nombre}
               </td>
               <td className="border border-gray-300 p-2">{item.cantidad}</td>
-              
-
               <td className="border border-gray-300 p-2">
-                  <button
-                    className="bg-red-500 text-white px-3 py-1 rounded"
-                    onClick={() => handleBorrarItem(index)}
-                  >
-                    Borrar
-                  </button>
-
+                  <div className='flex justify-center gap-4'>
                      <button
-                    className="bg-blue-500 text-white px-3 py-1 rounded"
+                    className="bg-blue-500 text-white px-4 py-1 rounded"
                     onClick={() => handleEditarItem(index)}
                   >
                     Editar
                   </button>
+
+                  <button
+                    className="bg-red-500 text-white px-4 py-1 rounded"
+                    onClick={() => handleBorrarItem(index)}
+                  >
+                    Borrar
+                  </button>
+                  </div>
                 </td>
             </tr>
           ))}
@@ -658,7 +647,7 @@ useEffect(() => {
           Volver
         </button>
         <button
-          onClick={handleCancelar} // Llama a la función que vacía el carrito
+          onClick={handleCancelar}
           className="bg-black text-white px-6 py-2 rounded-lg font-bold"
 
         >
@@ -667,7 +656,6 @@ useEffect(() => {
 
         <button 
           onClick={handleGuardarLocal}
-          // Llama a la función que vacía el carrito
           className="bg-black text-white px-6 py-2 rounded-lg font-bold"
         >
           Guardar
