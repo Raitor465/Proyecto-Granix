@@ -3,8 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import {setUpDataBase} from '@/lib/indexedDB';
 
+import { Route} from 'lucide-react';
+import { useRouter } from 'next/navigation';
   
 export default function TomarPedido() {
+    const router = useRouter();
     const [busqueda, setBusqueda] = useState("");
     const [sugerencias, setSugerencias] = useState<any[]>([]);
     const [listaFiltrada, setListaFiltrada] = useState<any[]>([]);
@@ -25,6 +28,7 @@ export default function TomarPedido() {
     const [totalPIva, setTotalPIva] = useState<number>(0);
     const [totalBonGen, setTotalBonGen] = useState<number>(0);
     const [totalBonCompleto, setTotalBonCompleto] = useState<number>(0);
+    const [editandoIndex, setEditandoIndex] = useState<number | null>(null);
 
 useEffect(() => {
     const bonGen = Number(bonificacionGeneral) || 0;
@@ -49,7 +53,6 @@ useEffect(() => {
       bonG += car.subtotal * (bonGen / 100);
       bonT = bonT + car.subtotal * ((bonGen + bonEsp) / 100) + car.bonificacionItem;
     }
-    //console.log(bonT)
     setTotal(suma);
     setTotalSinImpuesto(sinImp);
     setTotalIva(iva);
@@ -187,8 +190,21 @@ useEffect(() => {
   };
 
   const handleSeleccionArticulo = (articulo: any) => {
+    const indexExistente = carrito.findIndex(
+    (c) => c.articulo.artic_pr === articulo.artic_pr);
+      if (indexExistente !== -1) {
+      const item = carrito[indexExistente];
+      setArticuloSeleccionado(item.articulo);
+      setCantidad(item.cantidad);
+      setBonificacionItem(String(item.bonificacionItem));
+      setEditandoIndex(indexExistente);
+    } else {
+      setArticuloSeleccionado(articulo);
+      setCantidad("");
+      setBonificacionItem("");
+      setEditandoIndex(null);
+    }
     setBusqueda(articulo.Articulos?.ARTIC || "");
-    setArticuloSeleccionado(articulo); // Guardamos el artículo seleccionado
     setIVA(articulo.Articulos?.Ivas?.porc)
     setSugerencias([]);
     };
@@ -202,6 +218,8 @@ useEffect(() => {
       setMensaje("Ingresá una cantidad válida");
       return;
     }
+
+    
     const cant = Number(cantidad);
     const precioUnitario = articuloSeleccionado.prec_bult
     const subtotalBase = (precioUnitario - precioUnitario * (Number(bonificacionItem)/100)) * cant;
@@ -214,29 +232,72 @@ useEffect(() => {
       IVA : IVAArticulo
     };
     
-    setCarrito((prev) => [...prev, item]);
+     setCarrito((prev) => {
+    const copia = [...prev];
+
+    if (editandoIndex !== null) {
+      copia[editandoIndex] = item; // ✏️ editar
+    } else {
+      copia.push(item); // ➕ agregar
+    }
+
+    return copia;
+  });
     setBusqueda("");
     setArticuloSeleccionado(null);
     setCantidad("");
     setBonificacionItem("");
+    setEditandoIndex(null)
     setMensaje("Artículo agregado al carrito");
   };
   
   // Función para borrar todo el carrito
-    const handleCancelar = () => {
+    const handleCancelar = async () => {
       setCarrito([]); // Limpia el carrito
+
+
+       const data = await obtenerClienteActual()
+        if (!data) return ;
+
+        const {db , cliente} = data
+
+        const tx = db.transaction("Pedido","readwrite")
+        const store = tx.objectStore("Pedido")
+        const index = store.index("clienteId")
+        const clienteId = cliente.CODCL
+
+        const pedidoExistente = await index.get(clienteId)
+        if (pedidoExistente){
+          await store.delete(pedidoExistente.id)
+          setMensaje("Pedido eliminado (carrito vacío)")
+        }
+          await tx.done
+          return;
     };
 
     // Función para borrar un artículo específico del carrito
     const handleBorrarItem = (index: number) => {
       setCarrito((prev: any[]) => prev.filter((_: any, i: number) => i !== index)); // Elimina el artículo por índice
+
+      if (editandoIndex === index){
+        setArticuloSeleccionado(null)
+        setCantidad("")
+        setBonificacionItem("")
+        setBusqueda("")
+        setEditandoIndex(null)
+      }
     };
 
-    const handleTerminar = () => {
-      // habria que hacer una tabla de indexed con los pedidos, de tal cliente. 
-      // que pidio tantos articulos tanto bulto con tal precio.
-      // carrito y con eso habilitado para la deuda.
-
+    const handleEditarItem = (index: number) => {
+      const item = carrito[index];
+      console.log(item)
+      setArticuloSeleccionado(item.articulo);
+      setCantidad(item.cantidad);
+      setBonificacionItem(String(item.bonificacionItem));
+      setEditandoIndex(index); 
+      setBusqueda(String(item.articulo.artic_pr))
+      setIVA(item.IVA) 
+      setSugerencias([])  
     };
 
 
@@ -246,10 +307,6 @@ useEffect(() => {
         if (!data) return ;
 
         const {db , cliente} = data
-
-        //const db = await setUpDataBase()
-
-      
 
         const tx = db.transaction("Pedido","readwrite")
         const store = tx.objectStore("Pedido")
@@ -297,6 +354,16 @@ useEffect(() => {
         setMensaje("Error al guardar al pedido")
       }
     };
+
+    const limpiarEdicion = () => {
+      setArticuloSeleccionado(null);
+      setCantidad("");
+      setBonificacionItem("");
+      setBusqueda("");
+      setEditandoIndex(null);
+      setSugerencias([]);
+    };
+
   
     return (
     <div className="min-h-screen bg-white p-8">
@@ -324,6 +391,7 @@ useEffect(() => {
       <div>
         <label className="block text-gray-700 font-medium">Artículo</label>
         <input
+            disabled={editandoIndex !== null}
             type="text"
             className="w-full border border-gray-300 rounded p-2 mt-1"
             placeholder="Ingrese el artículo"
@@ -462,8 +530,17 @@ useEffect(() => {
             className="bg-black text-white px-6 py-2 rounded-lg font-bold"
             onClick={() => handleAgregarArticulo()} // Aquí conviertes la cantidad actual a número
             >
-                Agregar
+              {editandoIndex !== null ? "Actualizar" : "Agregar"}
         </button>
+
+         {editandoIndex !== null && (
+        <button
+            className="bg-gray-500 text-white px-6 py-2 rounded-lg font-bold"
+            onClick={limpiarEdicion}
+          >
+            Cancelar edición
+          </button>
+        )} 
 
       </div>
       <div className="overflow-x-auto">
@@ -545,10 +622,17 @@ useEffect(() => {
 
               <td className="border border-gray-300 p-2">
                   <button
-                    className="bg-red-500 text-white px-4 py-1 rounded"
-                    onClick={() => handleBorrarItem(index)} // Llama a la función con el índice
+                    className="bg-red-500 text-white px-3 py-1 rounded"
+                    onClick={() => handleBorrarItem(index)}
                   >
                     Borrar
+                  </button>
+
+                     <button
+                    className="bg-blue-500 text-white px-3 py-1 rounded"
+                    onClick={() => handleEditarItem(index)}
+                  >
+                    Editar
                   </button>
                 </td>
             </tr>
@@ -567,12 +651,16 @@ useEffect(() => {
 
       {/* Botones */}
       <div className="flex justify-center gap-4 mt-8">
-        <button className="bg-black text-white px-6 py-2 rounded-lg font-bold">
+        <button className="bg-black text-white px-6 py-2 rounded-lg font-bold"
+          onClick={() => router.push('/rutavisita')}
+        >
+          
           Volver
         </button>
         <button
           onClick={handleCancelar} // Llama a la función que vacía el carrito
           className="bg-black text-white px-6 py-2 rounded-lg font-bold"
+
         >
           Cancelar
         </button>
@@ -583,15 +671,6 @@ useEffect(() => {
           className="bg-black text-white px-6 py-2 rounded-lg font-bold"
         >
           Guardar
-        </button>
-
-        
-        <button
-          // Guarda el pedido
-          className="bg-black text-white px-6 py-2 rounded-lg font-bold"
-          onClick={handleTerminar}
-        >
-          Terminar
         </button>
       </div>
     </div>
