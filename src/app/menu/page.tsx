@@ -1,11 +1,16 @@
 'use client'
-import React from "react";
+import React, { useEffect } from "react";
 import { Route, Ban, FileText, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { logout } from "../rutavisita/page";
 
 const MenuInicial: React.FC = () => {
   const router = useRouter();
-
+  useEffect(() => {
+    if (sessionStorage.getItem('isLoggedIn') === 'false') {
+      router.push('/');
+    }
+  })
   return (
     <div className="min-h-screen flex flex-col items-center justify-between p-6 bg-gray-100">
       <main className="flex flex-col items-center justify-center flex-grow w-full">
@@ -35,7 +40,7 @@ const MenuInicial: React.FC = () => {
           </button>
 
           <button
-            onClick={() => router.push('/')}
+            onClick={logout}
             className="bg-white shadow-md p-6 rounded-2xl flex flex-col items-center hover:bg-red-200 transition"
           >
             <LogOut className="h-8 w-8 mb-2 text-red-500" />

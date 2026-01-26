@@ -130,7 +130,7 @@ const OfflineFirstForm: React.FC = () => {
     numero: '',
     clave: ''
   });
-  const { setVendedorId } = useVendedor();
+  //const { setVendedorId } = useVendedor();
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   // const [lastSync, setLastSync] = useState(null);
@@ -139,9 +139,6 @@ const OfflineFirstForm: React.FC = () => {
   useEffect(() => {
     setIsOnline(navigator.onLine);
 
-  
-
-  
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
@@ -276,7 +273,15 @@ const OfflineFirstForm: React.FC = () => {
     for (const cliente of clientesConDeudas) {
           await tx.store.put(cliente);
     }
+
     await tx.done;
+
+    const txAux = db.transaction('RutaDeNoVisita','readwrite');
+    for (const cliente of clientesConDeudas) {
+          await txAux.store.put(cliente);
+    }
+
+    await txAux.done;
     const txtx = db.transaction('Precios','readwrite');
     const preciosStore = txtx.objectStore('Precios');
 
@@ -297,101 +302,6 @@ const OfflineFirstForm: React.FC = () => {
     console.error('Error al guardar datos:', error);
   }
 };
-
-
-//   const saveData = async (e : React.FormEvent) => {
-//     e.preventDefault();
-    
-//     // const now = new Date().toISOString();
-//     const data = { 
-//       numero: Number(formData.numero), // Asegúrate de que sea un número
-//       clave : formData.clave,
-//       // email: formData.email,
-//       //created_at: now,
-//       //sincronizado: false
-//     };
-
-//     try {
-//       const vendedor = await login(data.numero,data.clave);
-//       console.log(vendedor)
-//       if (vendedor){
-//         alert('Datos guardados correctamente')
-//         //console.log(data.numero)
-//         const { data : rutaVisita, error } = await supabase
-//         .from('ClienteSucursal')
-//         .select(`
-//           nombre,orden_visita,CODCL,            
-//           RutaDeVisita:ruta_visita_id(nombre,ruta_visita_id,dia),
-//           Direccion(calle,numero,latitud,longitud),
-//           email,notas,telefono,entrega_observaciones,TPLIS
-//           `)
-//         .eq('ruta_visita_id.numero_vend', data.numero)
-//         .not('RutaDeVisita', 'is', null) // Asegura que RutaDeVisita no sea null
-//         //.eq('ClienteFrecuencia.id_cliente', 'CODCL'); // Filtra para que solo coincidan los valores
-
-//         // console.log(rutaVisita)
-//           // acá faltaría traer la lista de precios, asi q sería recorrer y traer la lista de articulos de 
-          
-//         if (error) throw new Error(error.message);
-
-//         const clientesConDeudas = [];
-
-//         for (const cliente of rutaVisita) {
-//           const { data: deudas, error: deudasError } = await supabase
-//             .from('Deudas')
-//             .select(`*`)
-//             .eq('cliente', cliente.CODCL);
-          
-//           let articulos: ArticuloConPrecio[] = [];
-//           if (cliente.TPLIS) {
-//             const { data: precios, error: preciosError } = await supabase
-//             .from('Precios')
-//             .select(`
-//               prec_bult,              
-//               nulis,
-//               ARTIC,
-//               Articulos:artic_pr(ARTIC,nombre,abrev),
-//             `)
-//             .eq('TPLIS', cliente.TPLIS);
-
-          
-
-          
-//           if (deudasError) throw new Error(deudasError.message);
-// /*           console.log(cliente.CODCL);
-//           console.log(deudas); */
-//           // Agregar las deudas al cliente para almacenar en IndexedDB después
-//             clientesConDeudas.push({ ...cliente, deudas,precios });
-//         }
-
-
-//         // if (rutaVisita && rutaVisita.length > 0) {
-//           const db = await setUpDataBase();
-//           const tx = db.transaction('RutaDeVisita', 'readwrite');
-        
-//           for (const cliente of clientesConDeudas){
-//             await tx.store.put(cliente);
-//           }
-//           await tx.done;
-//         // }
-
-
-//         setFormData({numero : '', clave: ''});
-//         //setIsLoggedIn(true)
-        
-        
-//         sessionStorage.setItem('isLoggedIn', 'true');
-//         router.push('/menu');
-//       }
-
-//       // await eliminarBaseDeDatosCompleta()
-//     } catch (error) {
-//       if (error instanceof Error) { 
-//         alert('Error al guardar los datos: ' + error.message);
-//       }
-//       console.error('Error al guardar datos:', error);
-//     }
-//   };
 
   return (
     <div className="p-4">

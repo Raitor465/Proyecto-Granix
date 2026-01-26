@@ -3,10 +3,11 @@
 import React, { useEffect } from "react";
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut, Clipboard
-  , Tag, MapPin, DollarSign, FileText, RefreshCw, Map, X } from 'lucide-react';
+  , Tag, MapPin, DollarSign, FileText, RefreshCw, Map } from 'lucide-react';
 import { Cliente } from "../crearruta/page";
-import { eliminarBaseDeDatosCompleta, setUpDataBase } from "@/lib/indexedDB";
+import { setUpDataBase } from "@/lib/indexedDB";
 import Link from 'next/link';
+import { useRouter } from "next/navigation";
 
 const botones_por_pagina = 5;
 
@@ -20,15 +21,36 @@ const opciones = [
   { name: "Geocalizar", icon: Map, link: "/geocalizar" },
 ];
 
+
+export const logout = async () => {
+    try {
+      sessionStorage.setItem("isLoggedIn", "false");
+
+      const db = await setUpDataBase();
+      const tx = db.transaction(["ClienteSucursal", "RutaDeVisita","Precios","Vendedor"], "readwrite");
+      await tx.objectStore("ClienteSucursal").clear();
+      await tx.objectStore("RutaDeVisita").clear();
+      await tx.objectStore("Precios").clear();
+      await tx.objectStore("Vendedor").clear();
+      await tx.done;
+
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error durante el logout", error);
+      alert("Ocurrió un error al cerrar sesión");
+    }
+  };
+
+
 export default function RutaVisita() {
   const [clienteInfo,setClienteInfo] = useState<Cliente[]>([]);
   const [pagina_actual, setpagina_actual] = useState(1);
   const [mostrarModal, setMostrarModal] = useState(false);
-
-  const totalPages = Math.ceil(clienteInfo.length / botones_por_pagina);
+  const [clientesConPedido, setClientesConPedido] = useState<Set<number>>(new Set());
+  const totalPages = Math.max(1,Math.ceil(clienteInfo.length / botones_por_pagina))
   const startIndex = (pagina_actual - 1) * botones_por_pagina;
   const buttonsToShow = clienteInfo.slice(startIndex, startIndex + botones_por_pagina);
-
+  const router = useRouter() 
 
   const antPag = () => setpagina_actual(prev => Math.max(prev - 1, 1));
   const sigPag = () => setpagina_actual(prev => Math.min(prev + 1, totalPages));
@@ -54,37 +76,60 @@ export default function RutaVisita() {
       const tx = db.transaction('RutaDeVisita','readonly');
       const clientes = await tx.store.getAll();
       setClienteInfo(clientes)
-      tx.done;
+      await tx.done;  
   }
+
+async function cargarClientesConPedido() {
+  const db = await setUpDataBase();
+  const tx = db.transaction("Pedido", "readonly");
+  const store = tx.objectStore("Pedido");
+
+  const pedidos = await store.getAll();
+  await tx.done;
+
+  const setClientes = new Set<number>();
+  pedidos.forEach((p: any) => {
+    if (p.clienteId) {
+      setClientes.add(p.clienteId);
+    }
+  });
+
+  setClientesConPedido(setClientes);
+}
+
+
+
+
   useEffect(() => {
-    ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
+    if (sessionStorage.getItem('isLoggedIn') === 'false') {
+      router.push('/'); // Redirige a CrearRuta
+    }else{
+      ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
+    }
   }, []);
 
+const [mounted, setMounted] = useState(false);
 
-  const logout = async () => {
-    try {
-      // Establece isLoggedIn como false en Session Storage
-      sessionStorage.setItem("isLoggedIn", "false");
-  
-      // Opcional: Limpia otros datos almacenados en sessionStorage
-      sessionStorage.removeItem("vendedorId");
-      sessionStorage.removeItem("vendedorData");
-  
-      // Limpia datos de IndexedDB si es necesario
-      const db = await setUpDataBase();
-      const tx = db.transaction(["ClienteSucursal", "RutaDeVisita"], "readwrite");
-      tx.objectStore("ClienteSucursal").clear();
-      tx.objectStore("RutaDeVisita").clear();
-      await tx.done;
-      // await eliminarBaseDeDatosCompleta();
-  
-      // Redirige al usuario a la página de login
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Error durante el logout", error);
-      alert("Ocurrió un error al cerrar sesión");
-    }
-  };
+useEffect(() => {
+  setMounted(true)
+}, []);
+
+useEffect(() => {
+  if (!mounted) return;
+
+  cargarClientesConPedido();
+}, [mounted, mostrarModal]);
+
+useEffect(() => {
+  const nuevasPaginas = Math.max(
+    1,
+    Math.ceil(clienteInfo.length / botones_por_pagina)
+  );
+
+  if (pagina_actual > nuevasPaginas) {
+    setpagina_actual(nuevasPaginas);
+  }
+}, [clienteInfo]);
 
 
   return (
@@ -115,17 +160,31 @@ export default function RutaVisita() {
       </header>
 
       <main className="flex-grow flex flex-col p-4 space-y-4">
-        {buttonsToShow.map((button, index) => (
-          <button
-            key={index}
-            className="w-full h-auto py-4 flex flex-col items-start text-left border border-gray-300 rounded-lg bg-white hover:bg-gray-100 transition duration-200"
-            onClick={() => abrirModal(button)}          
-            >
-            <span className="text-lg font-semibold pl-2">{'[' + button.orden_visita+ ']' + ' ' + button.nombre}</span>
-            <span className="text-sm text-gray-600 pl-2">{button.Direccion.calle + ' ' + button.Direccion.numero +' (' + button.CODCL + ')'  }</span>
-          </button>
-        ))}
-      </main>
+  {buttonsToShow.map((button, index) => {
+  const tienePedido = clientesConPedido.has(button.CODCL);
+
+      return (
+        <button
+          key={index}
+          onClick={() => abrirModal(button)}
+          className={`
+            w-full h-auto py-4 flex flex-col items-start text-left 
+            border rounded-lg transition duration-200
+            ${tienePedido 
+              ? "bg-pink-100 border-pink-400 hover:bg-pink-200" 
+              : "bg-white border-gray-300 hover:bg-gray-100"}
+          `}
+        >
+          <span className="text-lg font-semibold pl-2">
+            [{button.orden_visita}] {button.nombre}
+          </span>
+          <span className="text-sm text-gray-600 pl-2">
+            {button.Direccion.calle} {button.Direccion.numero} ({button.CODCL})
+          </span>
+        </button>
+      );
+          })}
+          </main>
 
       {/* Modal superpuesto */}
       {mostrarModal && (
@@ -153,7 +212,7 @@ export default function RutaVisita() {
       )}
       <footer className="p-4 bg-muted">
         <div className="grid grid-cols-3 gap-4">
-          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
+          <button onClick={() => router.push('/menu')} className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
             <Menu className="mr-4 h-6 w-6" />
             <span className="pl-2">Menú</span>
           </button>
