@@ -27,6 +27,9 @@ export async function setUpDataBase() {
             if (!database.objectStoreNames.contains('RutaDeVisita')) {
                 database.createObjectStore('RutaDeVisita', { keyPath: 'id', autoIncrement: true });
             }
+            /* if (!database.objectStoreNames.contains('RutaDeVisita')) {
+                database.createObjectStore('RutaDeNoVisita', { keyPath: 'id', autoIncrement: true });
+            } */
             
             if (!database.objectStoreNames.contains('ClienteSucursal')) {
                 database.createObjectStore('ClienteSucursal', {keyPath : 'CODCL'});
