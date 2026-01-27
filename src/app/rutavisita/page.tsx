@@ -2,12 +2,16 @@
 
 import React, { useEffect } from "react";
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut, Clipboard
-  , Tag, MapPin, DollarSign, FileText, RefreshCw, Map } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut,
+  Clipboard, Tag, MapPin, DollarSign, FileText, RefreshCw, Map, X,
+  Wallet
+} from 'lucide-react';
 import { Cliente } from "../crearruta/page";
 import { setUpDataBase } from "@/lib/indexedDB";
 import Link from 'next/link';
 import { useRouter } from "next/navigation";
+
 
 const botones_por_pagina = 5;
 
@@ -41,6 +45,9 @@ export const logout = async () => {
     }
   };
 
+  const tieneDeudas = (cliente: Cliente) => {
+  return Array.isArray((cliente as any).deudas) && (cliente as any).deudas.length > 0;
+};
 
 export default function RutaVisita() {
   const [clienteInfo,setClienteInfo] = useState<Cliente[]>([]);
@@ -169,12 +176,15 @@ useEffect(() => {
           onClick={() => abrirModal(button)}
           className={`
             w-full h-auto py-4 flex flex-col items-start text-left 
-            border rounded-lg transition duration-200
+            border rounded-lg transition duration-200 relative
             ${tienePedido 
               ? "bg-pink-100 border-pink-400 hover:bg-pink-200" 
               : "bg-white border-gray-300 hover:bg-gray-100"}
           `}
         >
+          {tieneDeudas(button) && (
+  <Wallet className="absolute top-2 right-2 h-6 w-6 text-red-500" />
+)}
           <span className="text-lg font-semibold pl-2">
             [{button.orden_visita}] {button.nombre}
           </span>
