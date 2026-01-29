@@ -4,7 +4,9 @@
 import { setUpDataBase } from "@/lib/indexedDB";
 import { Cliente } from "../crearruta/page";
 import { useState, useEffect } from "react";
-import { LogOut } from 'lucide-react';
+//import { LogOut } from 'lucide-react';
+
+import { LogOut, User,MapPin,Phone,Mail,FileText,Truck,Hash,Save } from "lucide-react";
 
 export default function ActualizarDatos() {
   const [cliente, setCliente] = useState<Cliente | null>(null);
@@ -13,10 +15,8 @@ export default function ActualizarDatos() {
     const db = await setUpDataBase();
     const tx = db.transaction("ClienteSucursal", "readonly");
     const clientes = (await tx.store.getAll()) as Cliente[];
-    const clienteSeleccionado = clientes[0];
-    setCliente(clienteSeleccionado);
-    console.log(clienteSeleccionado);
-    tx.done;
+    setCliente(clientes[0]);
+    await tx.done;
   }
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export default function ActualizarDatos() {
   }, []);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setCliente((prev) => (prev ? { ...prev, [name]: value } : null));
@@ -41,102 +41,127 @@ export default function ActualizarDatos() {
 
   // Función para manejar la navegación a otra página (ruta de visita)
   const handleNavigation = () => {
-    window.location.href = "/rutavisita"; // Redirige al usuario a la ruta de visita
+    window.location.href = "/rutavisita";
   };
 
+  if (!cliente) return <div>Cargando...</div>;
+
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-2">{cliente.nombre}</h1>
-      <p className="text-gray-600 mb-6">{`${cliente.Direccion.calle} ${cliente.Direccion.numero}`}</p>
-  
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="orden_visita" className="block mb-1 font-medium">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Header */}
+      <header className="bg-white border-b px-4 py-6">
+        <div className="flex items-start gap-3">
+          <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+            <User className="h-6 w-6 text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold">{cliente.nombre}</h1>
+            <p className="text-sm text-slate-500 flex items-center gap-1">
+              <MapPin className="h-4 w-4" />
+              {cliente.Direccion.calle} {cliente.Direccion.numero}
+            </p>
+          </div>
+        </div>
+      </header>
+
+      {/* Formulario */}
+      <form onSubmit={handleSubmit} className="flex-1 p-4 space-y-4 pb-28">
+        {/* Orden visita */}
+        <div className="bg-white border rounded-xl p-4">
+          <label className="flex items-center gap-2 text-sm font-medium mb-2">
+            <Hash className="h-4 w-4 text-blue-600" />
             Orden de visita
           </label>
           <input
             type="number"
-            id="orden_visita"
             name="orden_visita"
             value={cliente.orden_visita}
             onChange={handleChange}
-            className="w-full p-2 border rounded-md"
+            className="w-full px-3 py-2 rounded-lg bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
         </div>
-  
-        <div>
-          <label htmlFor="telefono" className="block mb-1 font-medium">
+
+        {/* Teléfono */}
+        <div className="bg-white border rounded-xl p-4">
+          <label className="flex items-center gap-2 text-sm font-medium mb-2">
+            <Phone className="h-4 w-4 text-blue-600" />
             Teléfono
           </label>
           <input
             type="tel"
-            id="telefono"
             name="telefono"
             value={cliente.telefono}
             onChange={handleChange}
-            className="w-full p-2 border rounded-md"
+            className="w-full px-3 py-2 rounded-lg bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
         </div>
-  
-        <div>
-          <label htmlFor="notas" className="block mb-1 font-medium">
-            Notas
-          </label>
-          <textarea
-            id="notas"
-            name="notas"
-            value={cliente.notas}
-            onChange={handleChange}
-            className="w-full p-2 border rounded-md"
-            rows={3}
-          ></textarea>
-        </div>
-  
-        <div>
-          <label htmlFor="entrega_observaciones" className="block mb-1 font-medium">
-            Entrega (observaciones)
-          </label>
-          <textarea
-            id="entrega_observaciones"
-            name="entrega_observaciones"
-            value={cliente.entrega_observaciones}
-            onChange={handleChange}
-            className="w-full p-2 border rounded-md"
-            rows={3}
-          ></textarea>
-        </div>
-  
-        <div>
-          <label htmlFor="email" className="block mb-1 font-medium">
+
+        {/* Email */}
+        <div className="bg-white border rounded-xl p-4">
+          <label className="flex items-center gap-2 text-sm font-medium mb-2">
+            <Mail className="h-4 w-4 text-blue-600" />
             Email
           </label>
           <input
             type="email"
-            id="email"
             name="email"
             value={cliente.email}
             onChange={handleChange}
-            className="w-full p-2 border rounded-md"
+            className="w-full px-3 py-2 rounded-lg bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          />
+        </div>
+
+        {/* Notas */}
+        <div className="bg-white border rounded-xl p-4">
+          <label className="flex items-center gap-2 text-sm font-medium mb-2">
+            <FileText className="h-4 w-4 text-blue-600" />
+            Notas
+          </label>
+          <textarea
+            name="notas"
+            value={cliente.notas}
+            onChange={handleChange}
+            rows={3}
+            className="w-full px-3 py-2 rounded-lg bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+          />
+        </div>
+
+        {/* Observaciones entrega */}
+        <div className="bg-white border rounded-xl p-4">
+          <label className="flex items-center gap-2 text-sm font-medium mb-2">
+            <Truck className="h-4 w-4 text-blue-600" />
+            Entrega (observaciones)
+          </label>
+          <textarea
+            name="entrega_observaciones"
+            value={cliente.entrega_observaciones}
+            onChange={handleChange}
+            rows={3}
+            className="w-full px-3 py-2 rounded-lg bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
           />
         </div>
       </form>
-  
-      <footer className="p-4 bg-muted">
-        <div className="flex justify-between items-center">
+
+      {/* Footer */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
+        <div className="flex gap-3">
           <button
+            type="button"
             onClick={handleNavigation}
-            className="bg-gray-300 p-3 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300"
           >
-            <LogOut className="mr-2 h-5 w-5" />
-            <span className="pl-1">Volver</span>
+            <LogOut className="h-4 w-4" />
+            Volver
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
-            Actualizar Datos
+            <Save className="h-4 w-4" />
+            Actualizar datos
           </button>
         </div>
       </footer>
     </div>
-  );}
+  );
+}

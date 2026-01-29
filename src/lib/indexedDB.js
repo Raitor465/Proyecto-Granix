@@ -33,7 +33,9 @@ export async function setUpDataBase() {
             const pedidoStore = database.createObjectStore('Pedido', {keyPath: 'id', autoIncrement:true})
             pedidoStore.createIndex("clienteId","clienteId", {unique : true })
             
-
+            //if (!database.objectStoreNames.contains('CarritoCambiosPrecios')) {
+            database.createObjectStore('CarritoCambiosPrecios', { keyPath: 'id', autoIncrement: true });
+            //}
             console.log('Base de datos creada o abierta exitosamente.');
          },
         })
