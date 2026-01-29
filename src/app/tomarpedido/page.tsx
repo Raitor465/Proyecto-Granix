@@ -12,7 +12,6 @@ export default function TomarPedido() {
     const [listaFiltrada, setListaFiltrada] = useState<any[]>([]);
     const [articuloSeleccionado, setArticuloSeleccionado] = useState<any | null>(null);
     const [mensaje, setMensaje] = useState<string | null>(null);
-    
     const [cantidad, setCantidad] = useState<number | "">("");
     const [bonificacionGeneral, setBonificacionGeneral] = useState<string>("");
     const [bonificacionItem, setBonificacionItem] = useState<string>("");
@@ -28,6 +27,9 @@ export default function TomarPedido() {
     const [totalBonGen, setTotalBonGen] = useState<number>(0);
     const [totalBonCompleto, setTotalBonCompleto] = useState<number>(0);
     const [editandoIndex, setEditandoIndex] = useState<number | null>(null);
+    const [resultadoVisita, setResultadoVisita] = useState<"CONFORME" | "DISCONFORME">("CONFORME");
+    const [ motivoNoCompra, setMotivoNoCompra] = useState<string | null>(null);
+    const [comentario, setComentario] = useState<string>("");
 
 useEffect(() => {
   
@@ -154,11 +156,11 @@ useEffect(() => {
         await txPedido.done;
         if (pedido) {
           setCarrito(pedido.carrito || []);
-          setBonificacionGeneral(pedido.bonificaciones?.general ?? 0);
-          setbonoficacionEsp(pedido.bonificaciones?.especial ?? 0);   
+          setBonificacionGeneral(String(pedido.bonificaciones?.general ?? ""));
+          setbonoficacionEsp(String(pedido.bonificaciones?.especial ?? ""));   
         }else{
-            setBonificacionGeneral(cliente?.Bonificaciones?.BG_porc);
-            setbonoficacionEsp(cliente?.BonificacionesEspeciales?.PBOND);
+            setBonificacionGeneral(String(cliente?.Bonificaciones?.BG_porc ?? ""));
+            setbonoficacionEsp(String(cliente?.BonificacionesEspeciales?.PBOND ?? ""));
         }
         setPorcentajeIva(cliente?.PercepcionesIva?.PIVAANO ?? 0)
 
@@ -251,6 +253,10 @@ useEffect(() => {
   // Función para borrar todo el carrito
     const handleCancelar = async () => {
       setCarrito([]);
+      setComentario("");
+      setResultadoVisita("CONFORME")
+      setMotivoNoCompra(null)
+      //setSugerencias([])
        const data = await obtenerClienteActual()
         if (!data) return ;
 
@@ -270,7 +276,7 @@ useEffect(() => {
     };
 
     // Función para borrar un artículo específico del carrito
-    const handleBorrarItem = (index: number) => {
+    const handleBorrarItem = async (index: number) => {
       setCarrito((prev: any[]) => prev.filter((_: any, i: number) => i !== index)); 
       if (editandoIndex === index){
         setArticuloSeleccionado(null)
@@ -279,6 +285,11 @@ useEffect(() => {
         setBusqueda("")
         setEditandoIndex(null)
       }
+      if (carrito.length === 1){
+        setResultadoVisita("CONFORME")
+        setMotivoNoCompra(null)
+      }
+      setMensaje("Artículo eliminado del carrito")
     };
 
     const handleEditarItem = (index: number) => {
@@ -296,6 +307,11 @@ useEffect(() => {
 
     const handleGuardarLocal = async () => {
       try{
+        if (resultadoVisita === "DISCONFORME" && !motivoNoCompra){
+          setMensaje("Debe seleccionar un motivo de no compra")
+          return;
+        }
+        
         const data = await obtenerClienteActual()
         if (!data) return ;
 
@@ -323,6 +339,7 @@ useEffect(() => {
           carrito,bonGen,bonEsp,porcentajeIva,IVAArticulo
         });
 
+
         const pedido = {
           clienteId : cliente.CODCL,
           carrito,
@@ -331,6 +348,9 @@ useEffect(() => {
             especial : bonoficacionEsp,
           },
           totales,
+          resultadoVisita,
+          motivoNoCompra: resultadoVisita === "DISCONFORME" ? motivoNoCompra : null,
+          comentario: comentario.trim() ? comentario : "Sin comentario",
         }
 
         if (pedidoExistente){
@@ -339,6 +359,7 @@ useEffect(() => {
           await store.add({...pedido})
         }
         await tx.done;
+        setMensaje("Pedido guardado localmente correctamente");
       }catch(err){
         console.error(err)
         setMensaje("Error al guardar al pedido")
@@ -411,7 +432,7 @@ useEffect(() => {
             type="number"
             className="w-full border border-gray-300 rounded p-2 mt-1"
             placeholder="Ingrese bulto"
-            value={Number(cantidad) === 0 ? "" : cantidad}
+            value={cantidad === 0 ? "" : cantidad}
             onChange={(e) => setCantidad(e.target.value === "" ? "" : Number(e.target.value))}
             />
         </div>
@@ -484,22 +505,29 @@ useEffect(() => {
         <div>
         {/* <label className="block text-gray-700 font-medium">Ingresar No Compra</label> */}
         <select
-          className="w-full border rounded p-2 mt-1"
-          defaultValue="" // Por defecto se selecciona la opción vacía
+          value={motivoNoCompra ?? ""}
+          className={`w-full border p-2 mt-1 ${
+            resultadoVisita === "DISCONFORME" ? "text-black" : "text-gray-400"
+          }`}
+          disabled={resultadoVisita !== "DISCONFORME"}
+          onChange={(e) => setMotivoNoCompra(e.target.value)}
         >
-          <option value="1" >Sin disconformidad</option>
-          <option value="2" >Disconformidad</option>
+
+          <option value="CONFORME" >Sin disconformidad</option>
+          <option value="DISCONFORME" >Disconformidad</option>
         </select>
       </div>
 
       <div>
         <select
-          className="w-full border text-gray-400 p-2 mt-1"
-          defaultValue=""
+          value={motivoNoCompra ?? ""}
+          className={"w-full border p-2 mt-1  ${resultadoVisita === 'DISCONFORME' ? 'text-black : 'text-gray-400' }"}
+          disabled={resultadoVisita !== "DISCONFORME"} onChange={(e) => setMotivoNoCompra(e.target.value)}
         >
           <option value="" disabled>Ingresar No Compra</option>
-          <option className= "text-black"value="902">902 No Le Interesa</option>
+          <option value="902">902 No Le Interesa</option>
           <option value="903">903 Prefiere Al Distribuidor</option>
+          <option value="904">904 No se encontró la dirección</option>
           <option value="907">907 Tiene Stock</option>
           <option value="908">908 Tiene Deuda</option>
           <option value="909">909 Local Cerrado</option>
@@ -523,6 +551,8 @@ useEffect(() => {
               className="w-full border border-gray-300 rounded-md p-3 mt-1 
                         resize-none "//focus:outline-none focus:ring-2 focus:ring-pink-400"
               placeholder="Ej: entregar por la tarde, llamar antes, dejar en recepción"
+              value={comentario}
+              onChange={(e) => setComentario(e.target.value)}
             />
         </div>
         <div> </div>

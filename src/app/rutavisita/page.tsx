@@ -47,13 +47,48 @@ export default function RutaVisita() {
   const [pagina_actual, setpagina_actual] = useState(1);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [clientesConPedido, setClientesConPedido] = useState<Set<number>>(new Set());
-  const totalPages = Math.max(1,Math.ceil(clienteInfo.length / botones_por_pagina))
-  const startIndex = (pagina_actual - 1) * botones_por_pagina;
-  const buttonsToShow = clienteInfo.slice(startIndex, startIndex + botones_por_pagina);
-  const router = useRouter() 
+const totalPages = React.useMemo(() => {
+  return Math.max(
+    1,
+    Math.ceil(clienteInfo.length / botones_por_pagina)
+  );
+}, [clienteInfo]);
+  const buttonsToShow = React.useMemo(() => {
+  const start = (pagina_actual - 1) * botones_por_pagina;
+  return clienteInfo.slice(start, start + botones_por_pagina);
+}, [clienteInfo, pagina_actual]);
 
-  const antPag = () => setpagina_actual(prev => Math.max(prev - 1, 1));
-  const sigPag = () => setpagina_actual(prev => Math.min(prev + 1, totalPages));
+  const router = useRouter()
+  const [mounted, setMounted] = useState(false);
+ 
+
+const sigPag = () => {
+  setpagina_actual(prev => {
+    const paginas = Math.max(1, Math.ceil(clienteInfo.length / botones_por_pagina));
+    return Math.min(prev + 1, paginas);
+  });
+};
+
+const antPag = () => {
+  setpagina_actual(prev => Math.max(prev - 1, 1));
+};
+
+useEffect(() => {
+  if (clienteInfo.length > 0) {
+    setpagina_actual(1);
+  }
+}, [clienteInfo]);
+
+useEffect(() => {
+  console.log({
+    pagina_actual,
+    totalPages,
+    clientes: clienteInfo.length
+  });
+}, [pagina_actual, clienteInfo]);
+
+
+
   async function abrirModal (cliente : Cliente) {
     try{
       const db = await setUpDataBase();
@@ -97,39 +132,34 @@ async function cargarClientesConPedido() {
   setClientesConPedido(setClientes);
 }
 
-
-
-
-  useEffect(() => {
-    if (sessionStorage.getItem('isLoggedIn') === 'false') {
-      router.push('/'); // Redirige a CrearRuta
-    }else{
-      ClienteInfo(); // Llama a la función para cargar los datos cuando el componente se monta
-    }
-  }, []);
-
-const [mounted, setMounted] = useState(false);
-
 useEffect(() => {
   setMounted(true)
 }, []);
 
 useEffect(() => {
   if (!mounted) return;
+   if (sessionStorage.getItem('isLoggedIn') === 'false') {
+      router.push('/'); // Redirige a CrearRuta
+    }else{
+      ClienteInfo();
+      cargarClientesConPedido();
+    }
 
-  cargarClientesConPedido();
-}, [mounted, mostrarModal]);
+}, [mounted]);
 
 useEffect(() => {
-  const nuevasPaginas = Math.max(
-    1,
-    Math.ceil(clienteInfo.length / botones_por_pagina)
-  );
-
-  if (pagina_actual > nuevasPaginas) {
-    setpagina_actual(nuevasPaginas);
+  if (clienteInfo.length === 0) {
+    setpagina_actual(1);
+    return;
   }
+
+  const nuevasPaginas = Math.ceil(clienteInfo.length / botones_por_pagina);
+
+  setpagina_actual(prev =>
+    prev > nuevasPaginas ? nuevasPaginas : prev
+  );
 }, [clienteInfo]);
+
 
 
   return (
