@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { setUpDataBase } from '@/lib/indexedDB';
 import { Cliente } from '../crearruta/page';
 import { LogOut} from 'lucide-react';
+import { useCarrito } from '@/lib/carritoContext';
 
 interface LocationData {
   id : number;
@@ -15,6 +16,7 @@ interface LocationData {
 }
 
 export default function GeolocalizarPage() {
+  const { agregarItem } = useCarrito();
   const [locationData, setLocation] = useState<LocationData | null>(null);
   const [locationActual, setLocationActual] = useState<LocationData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -116,8 +118,21 @@ export default function GeolocalizarPage() {
       cliente.Direccion.longitud = locationActual.longitude;
   
       await store.put(cliente);
+      
+      // Agregar al carrito global
+      await agregarItem({
+        tipo: 'ubicacion',
+        cliente_id: cliente.CODCL,
+        cliente_nombre: cliente.nombre,
+        latitud_anterior: locationData.latitude,
+        longitud_anterior: locationData.longitude,
+        latitud_nueva: locationActual.latitude,
+        longitud_nueva: locationActual.longitude,
+        fecha: new Date().toISOString(),
+        sincronizado: false
+      });
   
-      alert('Ubicación actualizada exitosamente.');
+      alert('Ubicación actualizada exitosamente y agregada al carrito.');
     } catch (error) {
       setError('Error al guardar la ubicación: ' + (error as Error).message);
     } finally {

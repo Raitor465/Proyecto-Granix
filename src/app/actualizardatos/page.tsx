@@ -4,18 +4,22 @@
 import { setUpDataBase } from "@/lib/indexedDB";
 import { Cliente } from "../crearruta/page";
 import { useState, useEffect } from "react";
+import { useCarrito } from "@/lib/carritoContext";
 //import { LogOut } from 'lucide-react';
 
 import { LogOut, User,MapPin,Phone,Mail,FileText,Truck,Hash,Save } from "lucide-react";
 
 export default function ActualizarDatos() {
+  const { agregarItem } = useCarrito();
   const [cliente, setCliente] = useState<Cliente | null>(null);
+  const [clienteOriginal, setClienteOriginal] = useState<Cliente | null>(null);
 
   async function ClienteInfo() {
     const db = await setUpDataBase();
     const tx = db.transaction("ClienteSucursal", "readonly");
     const clientes = (await tx.store.getAll()) as Cliente[];
     setCliente(clientes[0]);
+    setClienteOriginal(JSON.parse(JSON.stringify(clientes[0]))); // Copia profunda
     await tx.done;
   }
 
@@ -30,10 +34,47 @@ export default function ActualizarDatos() {
     setCliente((prev) => (prev ? { ...prev, [name]: value } : null));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Datos actualizados:", cliente);
-    // Aquí iría la lógica para guardar los datos actualizados
+    
+    if (!cliente || !clienteOriginal) return;
+    
+    try {
+      // Guardar en IndexedDB
+      const db = await setUpDataBase();
+      const tx = db.transaction("ClienteSucursal", "readwrite");
+      await tx.store.put(cliente);
+      await tx.done;
+      
+      // Agregar al carrito global
+      await agregarItem({
+        tipo: 'actualizacion_datos',
+        cliente_id: cliente.CODCL,
+        cliente_nombre: cliente.nombre,
+        datos_anteriores: {
+          telefono: clienteOriginal.telefono,
+          email: clienteOriginal.email,
+          notas: clienteOriginal.notas,
+          entrega_observaciones: clienteOriginal.entrega_observaciones,
+          orden_visita: clienteOriginal.orden_visita
+        },
+        datos_nuevos: {
+          telefono: cliente.telefono,
+          email: cliente.email,
+          notas: cliente.notas,
+          entrega_observaciones: cliente.entrega_observaciones,
+          orden_visita: cliente.orden_visita
+        },
+        fecha: new Date().toISOString(),
+        sincronizado: false
+      });
+      
+      alert('Datos actualizados y agregados al carrito');
+      console.log("Datos actualizados:", cliente);
+    } catch (error) {
+      console.error('Error al guardar:', error);
+      alert('Error al guardar los datos');
+    }
   };
 
   if (!cliente) return <div>Cargando...</div>;
@@ -154,11 +195,12 @@ export default function ActualizarDatos() {
             Volver
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Save className="h-4 w-4" />
-            Actualizar datos
+            Guardar datos
           </button>
         </div>
       </footer>

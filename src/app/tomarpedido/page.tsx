@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import {setUpDataBase} from '@/lib/indexedDB';
-
+// INTEGRACIÓN CARRITO: Importar el hook para acceder al carrito global
+import { useCarrito } from '@/lib/carritoContext';
 import { useRouter } from 'next/navigation';
   
 export default function TomarPedido() {
     const router = useRouter();
+    // INTEGRACIÓN CARRITO: Obtener la función agregarItem del contexto
+    const { agregarItem } = useCarrito();
     const [busqueda, setBusqueda] = useState("");
     const [sugerencias, setSugerencias] = useState<any[]>([]);
     const [listaFiltrada, setListaFiltrada] = useState<any[]>([]);
@@ -359,7 +362,20 @@ useEffect(() => {
           await store.add({...pedido})
         }
         await tx.done;
-        setMensaje("Pedido guardado localmente correctamente");
+        
+        // INTEGRACIÓN CARRITO: Agregar el pedido al carrito global
+        // Esto permite que el pedido se sincronice junto con otros cambios
+        await agregarItem({
+          tipo: 'pedido',                  // Identifica que es un pedido
+          cliente_id: cliente.CODCL,       // ID del cliente
+          cliente_nombre: cliente.nombre,  // Nombre para mostrar en el carrito
+          items: carrito,                  // Array de artículos del pedido
+          total: totales.total,            // Total calculado del pedido
+          fecha: new Date().toISOString(), // Timestamp actual
+          sincronizado: false              // Marca como pendiente de sincronizar
+        });
+        
+        setMensaje("Pedido guardado localmente y agregado al carrito");
       }catch(err){
         console.error(err)
         setMensaje("Error al guardar al pedido")
