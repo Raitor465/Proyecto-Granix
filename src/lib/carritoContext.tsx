@@ -66,11 +66,19 @@ export type Pedido = {
 export type ComprobantePago = {
   id?: number;
   tipo: 'comprobante_pago';
-  cliente_id: number;
-  cliente_nombre: string;
-  deuda_id: number;
-  archivo: File | string;         // Archivo subido
+  cliente_id: number;              // Lo mantenemos en el tipo para mostrar en UI, pero no va a BD
+  cliente_nombre: string;          // Para mostrar en el carrito
+  deuda_id: number;                // <-- AHORA OBLIGATORIO (FK a Deudas.id)
+  operacion: number;               // Número de operación (para referencia)
+  tipo_factura: string;
+  importe: number;
+  fecha_vencimiento: string;
+  filial: number;
+  vendedor: number;
+  archivo_data: ArrayBuffer;
   archivo_nombre: string;
+  archivo_tipo: string;
+  archivo_size: number;
   fecha: string;
   sincronizado: boolean;
 };
@@ -187,7 +195,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
       const store = tx.objectStore('CarritoCambiosPrecios');
       const id = await store.add(item); // IndexedDB genera el ID automáticamente
       await tx.done;
-      
+
       // Actualizar el estado en memoria con el ID generado
       setCarrito(prev => [...prev, { ...item, id: id as number }]);
     } catch (error) {
@@ -209,7 +217,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
       const store = tx.objectStore('CarritoCambiosPrecios');
       await store.delete(id);
       await tx.done;
-      
+
       // Actualizar el estado filtrando el item eliminado
       setCarrito(prev => prev.filter(item => item.id !== id));
     } catch (error) {
@@ -232,7 +240,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
    */
   const obtenerItemsPorCliente = () => {
     const porCliente = new Map<number, ItemCarrito[]>();
-    
+
     carrito.forEach(item => {
       const clienteId = item.cliente_id;
       if (!porCliente.has(clienteId)) {
@@ -240,7 +248,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
       }
       porCliente.get(clienteId)!.push(item);
     });
-    
+
     return porCliente;
   };
 
@@ -279,7 +287,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
       for (const item of carrito) {
         try {
           console.log('Sincronizando item:', item.tipo, item);
-          
+
           // Switch para determinar qué hacer según el tipo de item
           switch (item.tipo) {
             case 'pedido':
@@ -292,7 +300,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
                   total: item.total,
                   fecha: item.fecha
                 });
-              
+
               if (errorPedido) {
                 console.error('Error al guardar pedido:', errorPedido);
                 throw new Error(errorPedido.message || JSON.stringify(errorPedido));
@@ -312,7 +320,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
                 }, {
                   onConflict: 'cliente_id,articulo_id' // Clave compuesta para detectar duplicados
                 });
-              
+
               if (errorPrecio) {
                 console.error('Error al guardar precio:', errorPrecio);
                 throw new Error(errorPrecio.message || JSON.stringify(errorPrecio));
@@ -328,7 +336,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
                   longitude: item.longitud_nueva
                 })
                 .eq('id', item.cliente_id);
-              
+
               if (errorUbicacion) {
                 console.error('Error al actualizar ubicación:', errorUbicacion);
                 throw new Error(errorUbicacion.message || JSON.stringify(errorUbicacion));
@@ -343,12 +351,12 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
               if (item.datos_nuevos.email !== undefined) updateData.email = item.datos_nuevos.email;
               if (item.datos_nuevos.notas !== undefined) updateData.notas = item.datos_nuevos.notas;
               if (item.datos_nuevos.orden_visita !== undefined) updateData.orden_visita = item.datos_nuevos.orden_visita;
-              
+
               const { data: dataDatos, error: errorDatos } = await supabase
                 .from('ClienteSucursal')
                 .update(updateData)
                 .eq('CODCL', item.cliente_id);
-              
+
               if (errorDatos) {
                 console.error('Error al actualizar datos:', errorDatos);
                 throw new Error(errorDatos.message || JSON.stringify(errorDatos));
@@ -356,23 +364,47 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
               break;
 
             case 'comprobante_pago':
-              // CASO 5: Guardar comprobante de pago
-              // TODO: Si hay archivos, se debe implementar la subida a Storage
-              const { data: dataComprobante, error: errorComprobante } = await supabase
+              console.log('Sincronizando comprobante de pago:', item);
+
+              // 1. Subir archivo a Supabase Storage
+              const fileName = `comprobantes/${Date.now()}_${item.archivo_nombre}`;
+              const { data: uploadData, error: uploadError } = await supabase
+                .storage
+                .from('pagos')
+                .upload(fileName, item.archivo_data, {
+                  contentType: item.archivo_tipo
+                });
+
+              if (uploadError) {
+                console.error('Error al subir archivo:', uploadError);
+                throw new Error(`Error al subir archivo: ${uploadError.message}`);
+              }
+
+              // 2. Obtener URL pública
+              const { data: { publicUrl } } = supabase
+                .storage
+                .from('pagos')
+                .getPublicUrl(fileName);
+
+              // 3. Crear registro en comprobantes_pago (SIN cliente_id, SOLO deuda_id)
+              const { error: dbError } = await supabase
                 .from('comprobantes_pago')
                 .insert({
-                  cliente_id: item.cliente_id,
-                  deuda_id: item.deuda_id,
+                  deuda_id: item.deuda_id,        // <-- FK a Deudas.id
+                  operacion: item.operacion,      // <-- Para referencia rápida
                   archivo_nombre: item.archivo_nombre,
-                  fecha: item.fecha
+                  archivo_url: publicUrl,
+                  fecha: item.fecha,
+                  estado: 'pendiente'
                 });
-              
-              if (errorComprobante) {
-                console.error('Error al guardar comprobante:', errorComprobante);
-                throw new Error(errorComprobante.message || JSON.stringify(errorComprobante));
-              }
-              break;
 
+              if (dbError) {
+                console.error('Error al guardar en BD:', dbError);
+                throw new Error(`Error al guardar en BD: ${dbError.message}`);
+              }
+
+              console.log('Comprobante guardado en BD');
+              break;
             case 'registro_deuda':
               // CASO 6: Guardar información de deuda
               const { data: dataDeuda, error: errorDeuda } = await supabase
@@ -382,7 +414,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
                   deuda_info: item.deuda_info,
                   fecha: item.fecha
                 });
-              
+
               if (errorDeuda) {
                 console.error('Error al guardar deuda:', errorDeuda);
                 throw new Error(errorDeuda.message || JSON.stringify(errorDeuda));
@@ -415,28 +447,28 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
         // ⚠️ CASO PARCIAL: Algunos fallaron, otros no
         // Eliminar solo los items que se guardaron exitosamente
         const db = await setUpDataBase();
-        
+
         // Eliminar del carrito de cambios
         const txCarrito = db.transaction('CarritoCambiosPrecios', 'readwrite');
         const storeCarrito = txCarrito.objectStore('CarritoCambiosPrecios');
-        
+
         for (const itemExitoso of exitosos) {
           if (itemExitoso.id) {
             await storeCarrito.delete(itemExitoso.id);
           }
         }
         await txCarrito.done;
-        
+
         // Eliminar pedidos de los clientes sincronizados exitosamente
         const clientesExitosos = exitosos
           .filter(item => item.tipo === 'pedido')
           .map(item => item.cliente_id);
-        
+
         if (clientesExitosos.length > 0) {
           const txPedido = db.transaction('Pedido', 'readwrite');
           const storePedido = txPedido.objectStore('Pedido');
           const todosPedidos = await storePedido.getAll();
-          
+
           for (const pedido of todosPedidos) {
             if (clientesExitosos.includes(pedido.clienteId)) {
               await storePedido.delete(pedido.id);
@@ -453,7 +485,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.setItem('clientesConError', JSON.stringify(clientesConError));
 
         // Construir mensaje detallado de errores
-        const mensajeErrores = fallidos.map(f => 
+        const mensajeErrores = fallidos.map(f =>
           `- ${f.item.cliente_nombre} (${f.item.tipo}): ${f.error}`
         ).join('\n');
 
@@ -489,19 +521,19 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
   const limpiarCarrito = async () => {
     try {
       const db = await setUpDataBase();
-      
+
       // Limpiar carrito de cambios
       const txCarrito = db.transaction('CarritoCambiosPrecios', 'readwrite');
       const storeCarrito = txCarrito.objectStore('CarritoCambiosPrecios');
       await storeCarrito.clear();
       await txCarrito.done;
-      
+
       // Limpiar pedidos después de sincronización exitosa
       const txPedido = db.transaction('Pedido', 'readwrite');
       const storePedido = txPedido.objectStore('Pedido');
       await storePedido.clear();
       await txPedido.done;
-      
+
       setCarrito([]); // Limpia el estado en memoria
     } catch (error) {
       console.error('Error al limpiar el carrito:', error);

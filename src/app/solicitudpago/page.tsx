@@ -4,24 +4,30 @@ import React from "react"
 
 import { useEffect, useState, useRef } from "react"
 import { setUpDataBase } from "@/lib/indexedDB"
+import { useCarrito } from "@/lib/carritoContext"
 // import type { Cliente, Deuda } from "@/lib/types"  
 
 export type Deuda = {
-  tipo: string
-  operacion: number
-  importe: number
-  fechaVencimiento: string
-  filial: number
-  vendedor: number
+  id: number;                      // <-- ID de la tabla Deudas (necesario para la FK)
+  tipo: string;
+  operacion: number;
+  importe: number;
+  fechaVencimiento: string;
+  filial: number;
+  vendedor: number;
+  estado?: 'disponible' | 'pendiente_carrito' | 'pendiente_supabase'
 }
 
 export type Cliente = {
-  id?: number
+  CODCL: number           // <-- ID real del cliente en tu BD
   nombre: string
-  direccion: string
-  telefono: string
+  Direccion: {            // <-- Objeto con calle y numero
+    calle: string
+    numero: string
+  }
   deudas: Deuda[]
 }
+
 import {
   ArrowLeft,
   FileText,
@@ -89,6 +95,7 @@ function formatFileSize(bytes: number) {
 type UploadedFile = {
   file: File
   preview: string | null
+  arrayBuffer: ArrayBuffer  // <-- Necesario para guardar en IndexedDB
 }
 
 /* =======================
@@ -316,6 +323,7 @@ function EmptyState() {
 ======================= */
 
 export default function PagoPage() {
+  const { agregarItem } = useCarrito()
   const [deudas, setDeudas] = useState<Deuda[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedDeuda, setSelectedDeuda] = useState<Deuda | null>(null)
@@ -346,7 +354,7 @@ export default function PagoPage() {
     loadDeudas()
   }, [])
 
-  const handleFileSelect = (file: File) => {
+    const handleFileSelect = async (file: File) => {  // <-- async
     const maxSize = 10 * 1024 * 1024 // 10MB
     if (file.size > maxSize) {
       alert("El archivo es demasiado grande. El tamaño máximo es 10MB.")
@@ -358,7 +366,8 @@ export default function PagoPage() {
       preview = URL.createObjectURL(file)
     }
 
-    setUploadedFile({ file, preview })
+    const arrayBuffer = await file.arrayBuffer()  // <-- Obtener el binario
+    setUploadedFile({ file, preview, arrayBuffer })  // <-- Guardar arrayBuffer
   }
 
   const handleFileRemove = () => {
@@ -368,17 +377,58 @@ export default function PagoPage() {
     setUploadedFile(null)
   }
 
-  const handleSubmit = async () => {
+    const handleSubmit = async () => {
     if (!selectedDeuda || !uploadedFile) return
 
     setIsSubmitting(true)
 
-    // Simular envío
-    //Completar para enviar a la base de datos 
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      // Obtener el cliente actual de IndexedDB
+      const db = await setUpDataBase()
+      const tx = db.transaction("ClienteSucursal", "readonly")
+      const clientes = await tx.objectStore("ClienteSucursal").getAll()
+      const cliente = clientes[0] as Cliente
 
-    setIsSubmitting(false)
-    setSubmitSuccess(true)
+      if (!cliente) {
+        alert("No se encontró el cliente")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Crear el item para el carrito
+      const nuevoPago = {
+        tipo: 'comprobante_pago' as const,
+        cliente_id: cliente.CODCL,
+        cliente_nombre: cliente.nombre,
+        deuda_id: selectedDeuda.id,
+        operacion: selectedDeuda.operacion,
+        tipo_factura: selectedDeuda.tipo,
+        importe: selectedDeuda.importe,
+        fecha_vencimiento: selectedDeuda.fechaVencimiento,
+        filial: selectedDeuda.filial,
+        vendedor: selectedDeuda.vendedor,
+        archivo_data: uploadedFile.arrayBuffer,
+        archivo_nombre: uploadedFile.file.name,
+        archivo_tipo: uploadedFile.file.type,
+        archivo_size: uploadedFile.file.size,
+        fecha: new Date().toISOString(),
+        sincronizado: false
+      }
+
+      // Agregar al carrito
+      await agregarItem(nuevoPago)
+
+      // Limpiar y mostrar éxito
+      setSelectedDeuda(null)
+      handleFileRemove()
+      setSubmitSuccess(true)
+      
+    } catch (error) {
+      console.error("Error al agregar al carrito:", error)
+      alert("Error al guardar el pago. Intenta nuevamente.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleBack = () => {
@@ -397,11 +447,12 @@ export default function PagoPage() {
           <div className="bg-emerald-100 p-4 rounded-full w-fit mx-auto mb-4">
             <CheckCircle2 className="h-10 w-10 text-emerald-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Comprobante enviado
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">
+            ¡Agregado al carrito!
           </h2>
           <p className="text-gray-500 mb-6">
-            Tu comprobante de pago para la operación #{selectedDeuda?.operacion} ha sido enviado correctamente.
+            El comprobante de pago se guardó en el carrito. 
+            Sincronizá todos los cambios desde el menú principal.
           </p>
           <button
             type="button"
@@ -523,9 +574,9 @@ export default function PagoPage() {
                 Enviando...
               </>
             ) : (
-              <>
+                          <>
                 <Upload className="h-5 w-5" />
-                Enviar comprobante
+                Agregar al carrito
               </>
             )}
           </button>
