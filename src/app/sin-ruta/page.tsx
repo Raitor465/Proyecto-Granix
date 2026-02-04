@@ -26,12 +26,13 @@ const sinRuta: React.FC = () => {
   const [pagina_actual, setpagina_actual] = useState(1);
   const [filtroNombre, setFiltroNombre] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [clientesConPedido, setClientesConPedido] = useState<Set<number>>(new Set());
   const [clientesSincronizados, setClientesSincronizados] = useState<Set<number>>(new Set());
+  const [clientesConError, setClientesConError] = useState<Set<number>>(new Set());
 
   const cerrarModal = () => setMostrarModal(false);
  
   const startIndex = (pagina_actual - 1) * botones_por_pagina;
-  const [clientesConPedido, setClientesConPedido] = useState<Set<number>>(new Set());
   const clientesFiltrados = clienteInfo.filter(cliente =>
     cliente.nombre.toLowerCase().includes(filtroNombre.toLowerCase())
   );
