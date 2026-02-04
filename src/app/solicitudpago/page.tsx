@@ -112,6 +112,43 @@ function DeudaSelectionCard({
   onSelect: () => void
 }) {
   const status = getVencimientoStatus(deuda.fechaVencimiento)
+  const isPendiente = deuda.estado === 'pendiente_carrito'
+
+  // Si está pendiente, mostrar como deshabilitada
+  if (isPendiente) {
+    return (
+      <div className="w-full text-left rounded-xl border-2 border-amber-200 bg-amber-50 opacity-75 cursor-not-allowed">
+        <div className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-5 h-5 rounded-full border-2 border-amber-400 bg-amber-100 flex items-center justify-center">
+                <span className="text-amber-600 text-xs">✓</span>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-amber-600" />
+                  <span className="font-semibold text-amber-900">{deuda.tipo}</span>
+                </div>
+                <p className="text-sm text-amber-700">Op. #{deuda.operacion}</p>
+              </div>
+            </div>
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-amber-200 text-amber-800 border-amber-300">
+              En Carrito
+            </span>
+          </div>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-amber-200">
+            <div className="flex items-center gap-2 text-sm text-amber-700">
+              <Calendar className="h-4 w-4" />
+              {formatDate(deuda.fechaVencimiento)}
+            </div>
+            <span className="text-lg font-bold text-amber-900">
+              {formatCurrency(deuda.importe)}
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <button
@@ -323,7 +360,7 @@ function EmptyState() {
 ======================= */
 
 export default function PagoPage() {
-  const { agregarItem } = useCarrito()
+  const { agregarItem, carrito } = useCarrito()
   const [deudas, setDeudas] = useState<Deuda[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedDeuda, setSelectedDeuda] = useState<Deuda | null>(null)
@@ -331,7 +368,7 @@ export default function PagoPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
-  useEffect(() => {
+    useEffect(() => {
     const loadDeudas = async () => {
       setIsLoading(true)
       try {
@@ -340,7 +377,19 @@ export default function PagoPage() {
         const clientes = (await tx.store.getAll()) as Cliente[]
 
         const deudasCliente = clientes[0]?.deudas ?? []
-        setDeudas(deudasCliente)
+        
+        // Verificar qué deudas ya están en el carrito
+        const deudasConEstado = deudasCliente.map(deuda => {
+          const enCarrito = carrito.some(
+            (item: any) => item.tipo === 'comprobante_pago' && item.deuda_id === deuda.id
+          )
+          return {
+            ...deuda,
+            estado: enCarrito ? 'pendiente_carrito' as const : 'disponible' as const
+          }
+        })
+        
+        setDeudas(deudasConEstado)
 
         await tx.done
       } catch (error) {
@@ -352,7 +401,7 @@ export default function PagoPage() {
     }
 
     loadDeudas()
-  }, [])
+  }, [carrito]) // <-- Agregar carrito como dependencia
 
     const handleFileSelect = async (file: File) => {  // <-- async
     const maxSize = 10 * 1024 * 1024 // 10MB
