@@ -386,25 +386,69 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
                 .from('pagos')
                 .getPublicUrl(fileName);
 
-              // 3. Crear registro en comprobantes_pago (SIN cliente_id, SOLO deuda_id)
-              const { error: dbError } = await supabase
+              // 3. Crear registro en comprobantes_pago
+              const { error: errorComprobante } = await supabase
                 .from('comprobantes_pago')
                 .insert({
-                  deuda_id: item.deuda_id,        // <-- FK a Deudas.id
-                  operacion: item.operacion,      // <-- Para referencia rápida
+                  deuda_id: item.deuda_id,
+                  operacion: item.operacion,
                   archivo_nombre: item.archivo_nombre,
                   archivo_url: publicUrl,
                   fecha: item.fecha,
                   estado: 'pendiente'
                 });
 
-              if (dbError) {
-                console.error('Error al guardar en BD:', dbError);
-                throw new Error(`Error al guardar en BD: ${dbError.message}`);
+              if (errorComprobante) {
+                console.error('Error al guardar comprobante:', errorComprobante);
+                throw new Error(errorComprobante.message || JSON.stringify(errorComprobante));
               }
 
-              console.log('Comprobante guardado en BD');
-              break;
+              // 4. ACTUALIZAR la deuda a estado "comprobante_pendiente" en Supabase
+  const { error: errorUpdateDeuda } = await supabase
+    .from('Deudas')
+    .update({ estado_pago: 'comprobante_pendiente' })
+    .eq('id', item.deuda_id);
+  
+  if (errorUpdateDeuda) {
+    console.error('Error al actualizar deuda:', errorUpdateDeuda);
+    throw new Error(`Error al actualizar deuda: ${errorUpdateDeuda.message}`);
+  }
+  
+  // 5. ACTUALIZAR IndexedDB para que la próxima vez aparezca como pendiente
+  try {
+    const db = await setUpDataBase();
+    const tx = db.transaction('ClienteSucursal', 'readwrite');
+    const store = tx.objectStore('ClienteSucursal');
+    
+    // Obtener el cliente
+    const clientes = await store.getAll();
+    const cliente = clientes[0];
+    
+    if (cliente && cliente.deudas) {
+      // Actualizar la deuda específica
+      const deudasActualizadas = cliente.deudas.map((deuda: any) => {
+        if (deuda.id === item.deuda_id) {
+          return { ...deuda, estado_pago: 'comprobante_pendiente' };
+        }
+        return deuda;
+      });
+      
+      // Guardar el cliente actualizado
+      await store.put({
+        ...cliente,
+        deudas: deudasActualizadas
+      });
+    }
+    
+    await tx.done;
+    console.log('Deuda actualizada en IndexedDB');
+  } catch (error) {
+    console.error('Error actualizando IndexedDB:', error);
+    // No lanzamos error para no romper la sincronización
+  }
+  
+  console.log('Comprobante guardado y deuda actualizada');
+  break;
             case 'registro_deuda':
               // CASO 6: Guardar información de deuda
               const { data: dataDeuda, error: errorDeuda } = await supabase

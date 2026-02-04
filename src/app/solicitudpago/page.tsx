@@ -8,14 +8,14 @@ import { useCarrito } from "@/lib/carritoContext"
 // import type { Cliente, Deuda } from "@/lib/types"  
 
 export type Deuda = {
-  id: number;                      // <-- ID de la tabla Deudas (necesario para la FK)
+  id: number;
   tipo: string;
   operacion: number;
   importe: number;
   fechaVencimiento: string;
   filial: number;
   vendedor: number;
-  estado?: 'disponible' | 'pendiente_carrito' | 'pendiente_supabase'
+  estado_pago?: 'pendiente' | 'pagado' | 'comprobante_pendiente';  
 }
 
 export type Cliente = {
@@ -112,36 +112,36 @@ function DeudaSelectionCard({
   onSelect: () => void
 }) {
   const status = getVencimientoStatus(deuda.fechaVencimiento)
-  const isPendiente = deuda.estado === 'pendiente_carrito'
 
-  // Si está pendiente, mostrar como deshabilitada
-  if (isPendiente) {
+  // Si tiene comprobante pendiente (ya enviado a Supabase, esperando aprobación)
+  // Si tiene comprobante pendiente (estado_pago viene de IndexedDB)
+  if (deuda.estado_pago === 'comprobante_pendiente') {
     return (
-      <div className="w-full text-left rounded-xl border-2 border-amber-200 bg-amber-50 opacity-75 cursor-not-allowed">
+      <div className="w-full text-left rounded-xl border-2 border-purple-200 bg-purple-50 opacity-75 cursor-not-allowed">
         <div className="p-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-5 h-5 rounded-full border-2 border-amber-400 bg-amber-100 flex items-center justify-center">
-                <span className="text-amber-600 text-xs">✓</span>
+              <div className="w-5 h-5 rounded-full border-2 border-purple-400 bg-purple-100 flex items-center justify-center">
+                <CheckCircle2 className="h-3 w-3 text-purple-600" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-amber-600" />
-                  <span className="font-semibold text-amber-900">{deuda.tipo}</span>
+                  <FileText className="h-4 w-4 text-purple-600" />
+                  <span className="font-semibold text-purple-900">{deuda.tipo}</span>
                 </div>
-                <p className="text-sm text-amber-700">Op. #{deuda.operacion}</p>
+                <p className="text-sm text-purple-700">Op. #{deuda.operacion}</p>
               </div>
             </div>
-            <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-amber-200 text-amber-800 border-amber-300">
-              En Carrito
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-purple-200 text-purple-800 border-purple-300">
+              Pago en Revisión
             </span>
           </div>
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-amber-200">
-            <div className="flex items-center gap-2 text-sm text-amber-700">
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-purple-200">
+            <div className="flex items-center gap-2 text-sm text-purple-700">
               <Calendar className="h-4 w-4" />
               {formatDate(deuda.fechaVencimiento)}
             </div>
-            <span className="text-lg font-bold text-amber-900">
+            <span className="text-lg font-bold text-purple-900">
               {formatCurrency(deuda.importe)}
             </span>
           </div>
@@ -150,6 +150,43 @@ function DeudaSelectionCard({
     )
   }
 
+  // Si ya está pagada (aprobada)
+  if (deuda.estado_pago === 'pagado') {
+    return (
+      <div className="w-full text-left rounded-xl border-2 border-emerald-200 bg-emerald-50 opacity-75 cursor-not-allowed">
+        <div className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-5 h-5 rounded-full border-2 border-emerald-400 bg-emerald-100 flex items-center justify-center">
+                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-emerald-600" />
+                  <span className="font-semibold text-emerald-900">{deuda.tipo}</span>
+                </div>
+                <p className="text-sm text-emerald-700">Op. #{deuda.operacion}</p>
+              </div>
+            </div>
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-emerald-200 text-emerald-800 border-emerald-300">
+              Pagado
+            </span>
+          </div>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-emerald-200">
+            <div className="flex items-center gap-2 text-sm text-emerald-700">
+              <Calendar className="h-4 w-4" />
+              {formatDate(deuda.fechaVencimiento)}
+            </div>
+            <span className="text-lg font-bold text-emerald-900">
+              {formatCurrency(deuda.importe)}
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Deuda disponible para pagar (estado_pago = 'pendiente' o null)
   return (
     <button
       type="button"
@@ -200,7 +237,6 @@ function DeudaSelectionCard({
     </button>
   )
 }
-
 function FileUploader({
   uploadedFile,
   onFileSelect,
