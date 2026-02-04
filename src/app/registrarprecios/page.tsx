@@ -5,6 +5,8 @@ import { Menu, LogOut, Search, Save } from 'lucide-react';
 // Importamos la función para acceder a la base de datos local (IndexedDB)
 import { setUpDataBase } from '@/lib/indexedDB';
 import { supabase } from '@/lib/supabase';
+// INTEGRACIÓN CARRITO: Importar hook para acceder al carrito global
+import { useCarrito } from '@/lib/carritoContext';
 
 // Interface para tipar los artículos que vienen de la base de datos
 // Esta es la estructura real de los datos que guardamos en el login
@@ -30,6 +32,11 @@ interface ListaPrecios {
 }
 
 export default function RegistrarPrecio() {
+    // INTEGRACIÓN CARRITO: Obtener funciones del contexto del carrito
+    // - agregarItem: para agregar cambios de precio al carrito
+    // - carrito: array de todos los items para filtrar los del cliente actual
+    const { agregarItem, carrito } = useCarrito();
+    
     // Estado para la búsqueda de artículos
     const [entradaBusqueda, setEntradaBusqueda] = useState('');
     
@@ -53,7 +60,7 @@ export default function RegistrarPrecio() {
     const [clienteSeleccionado, setClienteSeleccionado] = useState<string | null>(null);
     const [nombreCliente, setNombreCliente] = useState<string>('');
     
-    // Estado para el carrito de cambios de precios pendientes
+    // Estado para mostrar los cambios del cliente actual
     const [carritoCambios, setCarritoCambios] = useState<any[]>([]);
     const [mostrarCarrito, setMostrarCarrito] = useState(false);
     
@@ -94,10 +101,11 @@ export default function RegistrarPrecio() {
                     setTplisSeleccionado(todasLasListas[0].TPLIS);
                 }
                 
-                // 4. Cargar carrito de cambios pendientes
-                const txCarrito = db.transaction('CarritoCambiosPrecios', 'readonly');
-                const storeCarrito = txCarrito.objectStore('CarritoCambiosPrecios');
-                const cambiosPendientes = await storeCarrito.getAll();
+                // 4. INTEGRACIÓN CARRITO: Filtrar cambios del carrito global para el cliente actual
+                // Solo mostramos los cambios de precio de este cliente específico
+                const cambiosPendientes = carrito.filter((item: any) => 
+                    item.tipo === 'precio' && item.cliente_id === clientes[0].CODCL
+                );
                 setCarritoCambios(cambiosPendientes);
                 console.log('Cambios pendientes cargados:', cambiosPendientes);
                 
@@ -136,6 +144,17 @@ export default function RegistrarPrecio() {
         
         cargarDatos();
     }, []);
+
+    // INTEGRACIÓN CARRITO: Effect para actualizar la vista cuando cambia el carrito global
+    // Esto mantiene sincronizado lo que se muestra en "Carrito de Cambios" con el carrito real
+    useEffect(() => {
+        if (clienteSeleccionado) {
+            const cambiosPendientes = carrito.filter((item: any) => 
+                item.tipo === 'precio' && item.cliente_id === clienteSeleccionado
+            );
+            setCarritoCambios(cambiosPendientes);
+        }
+    }, [carrito, clienteSeleccionado]);
 
     // useEffect para filtrar artículos cuando cambia la lista seleccionada o la búsqueda
     // Se ejecuta cada vez que: tplisSeleccionado, listasDePrecio o entradaBusqueda cambian
@@ -230,28 +249,27 @@ export default function RegistrarPrecio() {
             
             const precioAnterior = articulo.prec_bult;
             
-            // 7. Crear el objeto de cambio para el carrito
+            // 7. INTEGRACIÓN CARRITO: Crear el objeto de cambio para el carrito global
+            // IMPORTANTE: Incluir 'tipo: precio' para identificarlo en la sincronización
             const cambio = {
-                cliente_id: clienteSeleccionado,
-                cliente_nombre: nombreCliente,
-                articulo_id: codigo,
+                tipo: 'precio',                   // Identifica que es un cambio de precio
+                cliente_id: clienteSeleccionado,  // ID del cliente
+                cliente_nombre: nombreCliente,    // Nombre para mostrar
+                articulo_id: codigo,              // Código del artículo
                 articulo_nombre: articulo.Articulos?.nombre || 'Sin nombre',
-                precio_anterior: precioAnterior,
-                precio_nuevo: nuevoPrecio,
+                precio_anterior: precioAnterior,  // Precio original
+                precio_nuevo: nuevoPrecio,        // Precio modificado
                 tplis: tplisSeleccionado,
                 fecha_modificacion: new Date().toISOString(),
                 sincronizado: false
             };
             
-            // 8. Guardar en el carrito (IndexedDB)
-            const txCarrito = db.transaction('CarritoCambiosPrecios', 'readwrite');
-            const storeCarrito = txCarrito.objectStore('CarritoCambiosPrecios');
-            await storeCarrito.add(cambio);
-            await txCarrito.done;
+            // 8. Guardar en el carrito global
+            await agregarItem(cambio);
             
             console.log('Cambio agregado al carrito:', cambio);
             
-            // 9. Actualizar el estado del carrito
+            // 9. Actualizar el estado del carrito local
             setCarritoCambios(prev => [...prev, cambio]);
             
             // 10. Actualizar los precios personalizados del cliente actual
@@ -267,7 +285,7 @@ export default function RegistrarPrecio() {
                 return nuevoEstado;
             });
             
-            alert('Cambio agregado al carrito. No olvides sincronizar.');
+            alert('Cambio agregado al carrito.');
             
         } catch (error) {
             console.error('Error al guardar en el carrito:', error);
@@ -275,68 +293,7 @@ export default function RegistrarPrecio() {
         }
     };
 
-    // Función para sincronizar todos los cambios del carrito con Supabase
-    const sincronizarConSupabase = async () => {
-        if (carritoCambios.length === 0) {
-            alert('No hay cambios pendientes para sincronizar');
-            return;
-        }
-        
-        try {
-            const db = await setUpDataBase();
-            let errores = 0;
-            let exitosos = 0;
-            
-            // Procesar cada cambio del carrito
-            for (const cambio of carritoCambios) {
-                if (cambio.sincronizado) continue; // Saltar los ya sincronizados
-                
-                // Insertar/actualizar en Supabase
-                const { error } = await supabase
-                    .from('precios_clientes')
-                    .upsert({
-                        cliente_id: cambio.cliente_id,
-                        articulo_id: cambio.articulo_id,
-                        precio: cambio.precio_nuevo,
-                        tplis: cambio.tplis
-                    }, {
-                        onConflict: 'cliente_id,articulo_id'
-                    });
-                
-                if (error) {
-                    console.error('Error al sincronizar:', error);
-                    errores++;
-                } else {
-                    exitosos++;
-                    
-                    // Marcar como sincronizado en IndexedDB
-                    const txCarrito = db.transaction('CarritoCambiosPrecios', 'readwrite');
-                    const storeCarrito = txCarrito.objectStore('CarritoCambiosPrecios');
-                    
-                    // Actualizar el registro
-                    if (cambio.id) {
-                        cambio.sincronizado = true;
-                        await storeCarrito.put(cambio);
-                    }
-                    await txCarrito.done;
-                }
-            }
-            
-            // Actualizar estado del carrito
-            const txCarrito = db.transaction('CarritoCambiosPrecios', 'readonly');
-            const storeCarrito = txCarrito.objectStore('CarritoCambiosPrecios');
-            const cambiosActualizados = await storeCarrito.getAll();
-            setCarritoCambios(cambiosActualizados);
-            
-            alert(`Sincronización completa: ${exitosos} exitosos, ${errores} errores`);
-            
-        } catch (error) {
-            console.error('Error en la sincronización:', error);
-            alert('Error al sincronizar con el servidor');
-        }
-    };
-    
-    // Función para limpiar el carrito de cambios ya sincronizados
+    // Función para limpiar el carrito de cambios del cliente actual
     const limpiarCarritoSincronizado = async () => {
         try {
             const db = await setUpDataBase();
@@ -356,7 +313,7 @@ export default function RegistrarPrecio() {
             await txCarrito.done;
             
             // Actualizar estado
-            const cambiosRestantes = todosCambios.filter(c => !c.sincronizado);
+            const cambiosRestantes = todosCambios.filter((c: any) => !c.sincronizado);    
             setCarritoCambios(cambiosRestantes);
             
             alert('Carrito limpiado. Se eliminaron los cambios sincronizados.');
@@ -511,7 +468,7 @@ export default function RegistrarPrecio() {
                 </table>
             </div>
 
-            {/* Modal para ver el carrito de cambios */}
+            {/* Modal para ver cambios */}
             {mostrarCarrito && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[80vh] overflow-auto">
@@ -569,21 +526,6 @@ export default function RegistrarPrecio() {
                                         </tbody>
                                     </table>
                                 </div>
-                                
-                                <div className="mt-4 flex gap-2 justify-end">
-                                    <button 
-                                        onClick={limpiarCarritoSincronizado}
-                                        className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
-                                    >
-                                        Limpiar Sincronizados
-                                    </button>
-                                    <button 
-                                        onClick={sincronizarConSupabase}
-                                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                                    >
-                                        Sincronizar con Supabase
-                                    </button>
-                                </div>
                             </>
                         )}
                     </div>
@@ -603,7 +545,7 @@ export default function RegistrarPrecio() {
                             className="bg-blue-500 text-white p-3 text-sm rounded-lg hover:bg-blue-600 transition duration-200 flex items-center relative"
                         >
                             <Menu className="mr-2 h-5 w-5" />
-                            <span className="pl-1">Ver Carrito</span>
+                            <span className="pl-1">Ver Cambios</span>
                             {carritoCambios.filter(c => !c.sincronizado).length > 0 && (
                                 <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
                                     {carritoCambios.filter(c => !c.sincronizado).length}

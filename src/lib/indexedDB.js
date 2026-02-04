@@ -1,10 +1,20 @@
+// Importación de la librería idb para trabajar con IndexedDB de forma más sencilla
 import {openDB, deleteDB} from 'idb';
 
+// Nombre de la base de datos local
 const dbName = 'Granix';
-const dbVersion = 3;
 
+// IMPORTANTE: Se incrementó la versión de 1 a 2 para agregar el nuevo object store 'CarritoCambiosPrecios'
+// Al cambiar la versión, se ejecuta la función upgrade que crea las tablas faltantes
+const dbVersion = 2;
+
+// Variable global que mantiene la conexión a la base de datos
 let db; 
 
+/**
+ * Función para eliminar completamente la base de datos local
+ * Útil para resetear datos o solucionar problemas de corrupción
+ */
 export async function eliminarBaseDeDatosCompleta() {
   try {
       await deleteDB(dbName);
@@ -15,11 +25,21 @@ export async function eliminarBaseDeDatosCompleta() {
   }
 }
 
+/**
+ * Función principal para configurar y abrir la base de datos IndexedDB
+ * Esta función se ejecuta la primera vez y cuando hay cambios de versión
+ * 
+ * Flujo:
+ * 1. Si la DB ya existe (db != null), la retorna directamente
+ * 2. Si no existe o cambió la versión, ejecuta el upgrade
+ * 3. El upgrade verifica cada object store antes de crearlo (evita errores)
+ */
 export async function setUpDataBase() {
     if (!db){
         db = await openDB(dbName,dbVersion, {
-            upgrade(database, oldVersion, newVersion, transaction) {
-            // Crear stores solo si no existen
+            upgrade(database) {
+            // Validación: Solo crea el object store si NO existe
+            // Esto previene errores cuando se actualiza la versión de la BD
             if (!database.objectStoreNames.contains('Vendedor')) {
                 database.createObjectStore('Vendedor', { keyPath: 'numero' });
             }
@@ -27,27 +47,35 @@ export async function setUpDataBase() {
             if (!database.objectStoreNames.contains('RutaDeVisita')) {
                 database.createObjectStore('RutaDeVisita', { keyPath: 'id', autoIncrement: true });
             }
-            /* if (!database.objectStoreNames.contains('RutaDeVisita')) {
+
+            if (!database.objectStoreNames.contains('RutaDeNoVisita')) {
                 database.createObjectStore('RutaDeNoVisita', { keyPath: 'id', autoIncrement: true });
-            } */
-            
+            }
+
             if (!database.objectStoreNames.contains('ClienteSucursal')) {
-                database.createObjectStore('ClienteSucursal', {keyPath : 'CODCL'});
+                database.createObjectStore('ClienteSucursal', {keyPath : 'CODCL'})
             }
             
             if (!database.objectStoreNames.contains('Direccion')) {
-                database.createObjectStore('Direccion', {keyPath : 'direccion_id'});
+                database.createObjectStore('Direccion', {keyPath : 'direccion_id'})
             }
 
             if (!database.objectStoreNames.contains('Precios')) {
                 database.createObjectStore('Precios', { keyPath: 'TPLIS' });
             }
 
+            if (!database.objectStoreNames.contains('Pedido')) {
+                const pedidoStore = database.createObjectStore('Pedido', {keyPath: 'id', autoIncrement:true})
+                // Índice para buscar pedidos por cliente rápidamente
+                pedidoStore.createIndex("clienteId","clienteId", {unique : true })
+            }
+            
+            // NUEVO: Object store para el carrito unificado de cambios
+            // Almacena todos los cambios pendientes de sincronizar (pedidos, precios, ubicaciones, etc.)
             if (!database.objectStoreNames.contains('CarritoCambiosPrecios')) {
                 database.createObjectStore('CarritoCambiosPrecios', { keyPath: 'id', autoIncrement: true });
             }
-
-            console.log('Base de datos creada o actualizada exitosamente.');
+            console.log('Base de datos creada o abierta exitosamente.');
          },
         })
     }

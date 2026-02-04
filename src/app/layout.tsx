@@ -3,6 +3,7 @@ import React, { ReactNode } from 'react';
 import "../styles/globals.css";
 import Image from "next/image"; // Componente para imágenes en Next.js
 import logo from "../lib/granix-logo.jpg"; // Importa el logo correctamente como un módulo estático
+import { CarritoProvider } from "../lib/carritoContext";
 
 interface LayoutProps {
   children: ReactNode;
@@ -33,7 +34,9 @@ export default function Layout({ children }: LayoutProps) {
         {/* Fondo blanco y texto gris oscuro (#333333) para el contenido principal */}
 
         <main className="p-4 bg-white text-[#333333]">
-          {children} {/* Aquí se renderizarán las páginas hijas */}
+          <CarritoProvider>
+            {children} {/* Aquí se renderizarán las páginas hijas */}
+          </CarritoProvider>
         </main>
 
         {/* Footer con fondo gris oscuro y texto blanco */}
