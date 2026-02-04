@@ -26,6 +26,7 @@ const sinRuta: React.FC = () => {
   const [pagina_actual, setpagina_actual] = useState(1);
   const [filtroNombre, setFiltroNombre] = useState('');
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [clientesSincronizados, setClientesSincronizados] = useState<Set<number>>(new Set());
 
   const cerrarModal = () => setMostrarModal(false);
  
@@ -70,12 +71,35 @@ const sinRuta: React.FC = () => {
      const pedidos = await store.getAll();
      await tx.done;
    
+     const setClientesAnterior = new Set(clientesConPedido);
      const setClientes = new Set<number>();
      pedidos.forEach((p: any) => {
        if (p.clienteId) {
          setClientes.add(p.clienteId);
        }
      });
+   
+     // Detectar clientes que fueron sincronizados (estaban en la lista anterior pero ya no)
+     // Solo si había clientes antes (para evitar falsos positivos al cargar la primera vez)
+     if (setClientesAnterior.size > 0) {
+       const nuevosSincronizados = new Set<number>();
+       setClientesAnterior.forEach(clienteId => {
+         if (!setClientes.has(clienteId)) {
+           nuevosSincronizados.add(clienteId);
+         }
+       });
+       
+       if (nuevosSincronizados.size > 0) {
+         console.log('Clientes sincronizados detectados:', nuevosSincronizados);
+         setClientesSincronizados(prev => {
+           const nuevoSet = new Set([...prev, ...nuevosSincronizados]);
+           // Guardar en sessionStorage
+           sessionStorage.setItem('clientesSincronizados', JSON.stringify([...nuevoSet]));
+           return nuevoSet;
+         });
+         // El color verde se mantiene permanentemente durante toda la sesión
+       }
+     }
    
      setClientesConPedido(setClientes);
    }
@@ -98,6 +122,20 @@ const sinRuta: React.FC = () => {
  useEffect(() => {
    cargarClientesConPedido();
  }, [mostrarModal]); 
+
+ useEffect(() => {
+   const interval = setInterval(() => {
+     cargarClientesConPedido();
+   }, 2000);
+   return () => clearInterval(interval);
+ }, []);
+
+ useEffect(() => {
+   const interval = setInterval(() => {
+     cargarClientesConPedido();
+   }, 2000);
+   return () => clearInterval(interval);
+ }, []); 
 
  useEffect(() => {
    const nuevasPaginas = Math.max(
@@ -151,6 +189,8 @@ const sinRuta: React.FC = () => {
 <main className="flex-grow flex flex-col p-4 space-y-4">
   {buttonsToShow.map((button, index) => {
   const tienePedido = clientesConPedido.has(button.CODCL);
+  const sincronizadoRecientemente = clientesSincronizados.has(button.CODCL);
+  const tieneError = clientesConError.has(button.CODCL);
 
       return (
         <button
@@ -159,8 +199,12 @@ const sinRuta: React.FC = () => {
           className={`
             w-full h-auto py-4 flex flex-col items-start text-left 
             border rounded-lg transition duration-200
-            ${tienePedido 
-              ? "bg-pink-100 border-pink-400 hover:bg-pink-200" 
+            ${tienePedido
+              ? "bg-pink-100 border-pink-400 hover:bg-pink-200"
+              : tieneError
+              ? "bg-yellow-100 border-yellow-400 hover:bg-yellow-200"
+              : sincronizadoRecientemente
+              ? "bg-green-100 border-green-400 hover:bg-green-200" 
               : "bg-white border-gray-300 hover:bg-gray-100"}
           `}
         >

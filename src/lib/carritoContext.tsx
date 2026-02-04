@@ -320,12 +320,12 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
               break;
 
             case 'ubicacion':
-              // CASO 3: Actualizar latitud y longitud del cliente
+              // CASO 3: Actualizar latitud y longitud del cliente en la tabla ubicacion
               const { data: dataUbicacion, error: errorUbicacion } = await supabase
-                .from('clientes')
+                .from('ubicacion')
                 .update({
-                  latitud: item.latitud_nueva,
-                  longitud: item.longitud_nueva
+                  latitude: item.latitud_nueva,
+                  longitude: item.longitud_nueva
                 })
                 .eq('id', item.cliente_id);
               
@@ -337,16 +337,17 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
 
             case 'actualizacion_datos':
               // CASO 4: Actualizar información general del cliente
+              // Solo actualizamos las columnas que existen en la tabla
+              const updateData: any = {};
+              if (item.datos_nuevos.telefono !== undefined) updateData.telefono = item.datos_nuevos.telefono;
+              if (item.datos_nuevos.email !== undefined) updateData.email = item.datos_nuevos.email;
+              if (item.datos_nuevos.notas !== undefined) updateData.notas = item.datos_nuevos.notas;
+              if (item.datos_nuevos.orden_visita !== undefined) updateData.orden_visita = item.datos_nuevos.orden_visita;
+              
               const { data: dataDatos, error: errorDatos } = await supabase
-                .from('clientes')
-                .update({
-                  telefono: item.datos_nuevos.telefono,
-                  email: item.datos_nuevos.email,
-                  notas: item.datos_nuevos.notas,
-                  entrega_observaciones: item.datos_nuevos.entrega_observaciones,
-                  orden_visita: item.datos_nuevos.orden_visita
-                })
-                .eq('id', item.cliente_id);
+                .from('ClienteSucursal')
+                .update(updateData)
+                .eq('CODCL', item.cliente_id);
               
               if (errorDatos) {
                 console.error('Error al actualizar datos:', errorDatos);
@@ -407,23 +408,49 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
       if (fallidos.length === 0) {
         // ✅ CASO EXITOSO: Todo se sincronizó correctamente
         await limpiarCarrito();
+        // Limpiar clientes con errores de sessionStorage
+        sessionStorage.removeItem('clientesConError');
         alert(`✅ Sincronización completada exitosamente.\n${exitosos.length} elementos guardados.`);
       } else {
         // ⚠️ CASO PARCIAL: Algunos fallaron, otros no
         // Eliminar solo los items que se guardaron exitosamente
         const db = await setUpDataBase();
-        const tx = db.transaction('CarritoCambiosPrecios', 'readwrite');
-        const store = tx.objectStore('CarritoCambiosPrecios');
+        
+        // Eliminar del carrito de cambios
+        const txCarrito = db.transaction('CarritoCambiosPrecios', 'readwrite');
+        const storeCarrito = txCarrito.objectStore('CarritoCambiosPrecios');
         
         for (const itemExitoso of exitosos) {
           if (itemExitoso.id) {
-            await store.delete(itemExitoso.id);
+            await storeCarrito.delete(itemExitoso.id);
           }
         }
-        await tx.done;
+        await txCarrito.done;
+        
+        // Eliminar pedidos de los clientes sincronizados exitosamente
+        const clientesExitosos = exitosos
+          .filter(item => item.tipo === 'pedido')
+          .map(item => item.cliente_id);
+        
+        if (clientesExitosos.length > 0) {
+          const txPedido = db.transaction('Pedido', 'readwrite');
+          const storePedido = txPedido.objectStore('Pedido');
+          const todosPedidos = await storePedido.getAll();
+          
+          for (const pedido of todosPedidos) {
+            if (clientesExitosos.includes(pedido.clienteId)) {
+              await storePedido.delete(pedido.id);
+            }
+          }
+          await txPedido.done;
+        }
 
         // Recargar el carrito desde IndexedDB (solo quedan los fallidos)
         await cargarCarrito();
+
+        // Guardar clientes con errores en sessionStorage
+        const clientesConError = Array.from(new Set(fallidos.map(f => f.item.cliente_id)));
+        sessionStorage.setItem('clientesConError', JSON.stringify(clientesConError));
 
         // Construir mensaje detallado de errores
         const mensajeErrores = fallidos.map(f => 
@@ -462,10 +489,18 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
   const limpiarCarrito = async () => {
     try {
       const db = await setUpDataBase();
-      const tx = db.transaction('CarritoCambiosPrecios', 'readwrite');
-      const store = tx.objectStore('CarritoCambiosPrecios');
-      await store.clear(); // Elimina todos los registros del object store
-      await tx.done;
+      
+      // Limpiar carrito de cambios
+      const txCarrito = db.transaction('CarritoCambiosPrecios', 'readwrite');
+      const storeCarrito = txCarrito.objectStore('CarritoCambiosPrecios');
+      await storeCarrito.clear();
+      await txCarrito.done;
+      
+      // Limpiar pedidos después de sincronización exitosa
+      const txPedido = db.transaction('Pedido', 'readwrite');
+      const storePedido = txPedido.objectStore('Pedido');
+      await storePedido.clear();
+      await txPedido.done;
       
       setCarrito([]); // Limpia el estado en memoria
     } catch (error) {

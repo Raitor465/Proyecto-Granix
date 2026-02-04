@@ -29,6 +29,8 @@ const opciones = [
 export const logout = async () => {
     try {
       sessionStorage.setItem("isLoggedIn", "false");
+      sessionStorage.removeItem("clientesSincronizados");
+      sessionStorage.removeItem("clientesConError");
 
       const db = await setUpDataBase();
       const tx = db.transaction(["ClienteSucursal", "RutaDeVisita","Precios","Vendedor"], "readwrite");
@@ -55,6 +57,36 @@ export default function RutaVisita() {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarCarrito, setMostrarCarrito] = useState(false);
   const [clientesConPedido, setClientesConPedido] = useState<Set<number>>(new Set());
+  const [clientesSincronizados, setClientesSincronizados] = useState<Set<number>>(() => {
+    // Cargar desde sessionStorage al iniciar
+    if (typeof window !== 'undefined') {
+      const guardados = sessionStorage.getItem('clientesSincronizados');
+      if (guardados) {
+        try {
+          const array = JSON.parse(guardados);
+          return new Set(array);
+        } catch {
+          return new Set();
+        }
+      }
+    }
+    return new Set();
+  });
+  const [clientesConError, setClientesConError] = useState<Set<number>>(() => {
+    // Cargar desde sessionStorage al iniciar
+    if (typeof window !== 'undefined') {
+      const guardados = sessionStorage.getItem('clientesConError');
+      if (guardados) {
+        try {
+          const array = JSON.parse(guardados);
+          return new Set(array);
+        } catch {
+          return new Set();
+        }
+      }
+    }
+    return new Set();
+  });
   const { carrito, obtenerItemsPorCliente, sincronizarTodo, eliminarItem } = useCarrito();
 const totalPages = React.useMemo(() => {
   return Math.max(
@@ -131,12 +163,35 @@ async function cargarClientesConPedido() {
   const pedidos = await store.getAll();
   await tx.done;
 
+  const setClientesAnterior = new Set(clientesConPedido);
   const setClientes = new Set<number>();
   pedidos.forEach((p: any) => {
     if (p.clienteId) {
       setClientes.add(p.clienteId);
     }
   });
+
+  // Detectar clientes que fueron sincronizados (estaban en la lista anterior pero ya no)
+  // Solo si había clientes antes (para evitar falsos positivos al cargar la primera vez)
+  if (setClientesAnterior.size > 0) {
+    const nuevosSincronizados = new Set<number>();
+    setClientesAnterior.forEach(clienteId => {
+      if (!setClientes.has(clienteId)) {
+        nuevosSincronizados.add(clienteId);
+      }
+    });
+    
+    if (nuevosSincronizados.size > 0) {
+      console.log('Clientes sincronizados detectados:', nuevosSincronizados);
+      setClientesSincronizados(prev => {
+        const nuevoSet = new Set([...prev, ...nuevosSincronizados]);
+        // Guardar en sessionStorage
+        sessionStorage.setItem('clientesSincronizados', JSON.stringify([...nuevoSet]));
+        return nuevoSet;
+      });
+      // El color verde se mantiene permanentemente durante toda la sesión
+    }
+  }
 
   setClientesConPedido(setClientes);
 }
@@ -155,6 +210,40 @@ useEffect(() => {
     }
 
 }, [mounted]);
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    cargarClientesConPedido();
+    // Recargar clientes con errores desde sessionStorage
+    const errores = sessionStorage.getItem('clientesConError');
+    if (errores) {
+      try {
+        const array = JSON.parse(errores);
+        setClientesConError(new Set(array));
+      } catch {}
+    } else {
+      setClientesConError(new Set());
+    }
+  }, 2000);
+  return () => clearInterval(interval);
+}, []);
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    cargarClientesConPedido();
+    // Recargar clientes con errores desde sessionStorage
+    const errores = sessionStorage.getItem('clientesConError');
+    if (errores) {
+      try {
+        const array = JSON.parse(errores);
+        setClientesConError(new Set(array));
+      } catch {}
+    } else {
+      setClientesConError(new Set());
+    }
+  }, 2000);
+  return () => clearInterval(interval);
+}, []);
 
 useEffect(() => {
   if (clienteInfo.length === 0) {
@@ -210,6 +299,8 @@ useEffect(() => {
       <main className="flex-grow flex flex-col p-4 space-y-4">
   {buttonsToShow.map((button, index) => {
   const tienePedido = clientesConPedido.has(button.CODCL);
+  const sincronizadoRecientemente = clientesSincronizados.has(button.CODCL);
+  const tieneError = clientesConError.has(button.CODCL);
 
       return (
         <button
@@ -218,8 +309,12 @@ useEffect(() => {
           className={`
             relative w-full h-auto py-4 flex flex-col items-start text-left 
             border rounded-lg transition duration-200
-            ${tienePedido 
-              ? "bg-pink-100 border-pink-400 hover:bg-pink-200" 
+            ${tienePedido
+              ? "bg-pink-100 border-pink-400 hover:bg-pink-200"
+              : tieneError
+              ? "bg-yellow-100 border-yellow-400 hover:bg-yellow-200"
+              : sincronizadoRecientemente
+              ? "bg-green-100 border-green-400 hover:bg-green-200" 
               : "bg-white border-gray-300 hover:bg-gray-100"}
           `}
         >
@@ -387,7 +482,7 @@ useEffect(() => {
                 <button
                   onClick={async () => {
                     await sincronizarTodo();
-                    alert('Sincronización completada');
+                    await cargarClientesConPedido();
                     setMostrarCarrito(false);
                   }}
                   className="flex-1 bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition duration-200"
