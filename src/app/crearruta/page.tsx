@@ -35,15 +35,7 @@ interface RutaInfo{
   nombre : string;
 }
 
-const arrayFrecuencias = [
-  {name : "Semanal", id : 1},
-  {name : "Quincenal (Primera Semana)", id:2},
-  {name : "Quincenal (Segunda Semana)", id:3},
-  {name : "Cada 21 Días,1° Semana", id:4},
-  {name : "Cada 21 Días,2° Semana", id:5},
-  {name : "Cada 21 Días,3° Semana",id:6},
-  {name : "Cada 28 Días",id:7},
-  {name : "Cada 42 Días",id:8}
+const arrayFrecuencias: never[] = [
 ]
 
 const dias = [
