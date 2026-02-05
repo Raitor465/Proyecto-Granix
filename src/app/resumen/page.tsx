@@ -148,15 +148,7 @@ export default function Resumen() {
           </button>
           <h1 className="text-2xl font-bold text-gray-800">Resumen</h1>
         </div>
-        <div className="relative h-10 w-24">
-          <Image 
-            src="/granix-logo.png" 
-            alt="Granix" 
-            fill
-            style={{ objectFit: 'contain' }}
-            priority
-          />
-        </div>
+        
       </header>
 
       {/* Main content */}

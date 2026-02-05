@@ -153,6 +153,9 @@ const sinRuta: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <div className="p-4">
+        <h1 className="text-2xl font-bold text-center text-black">Sin Ruta de Visita</h1>
+      </div>
       <header className="p-4 bg-primary text-primary-foreground">
         <div className="flex justify-between items-center mb-4">
           <button
@@ -247,16 +250,12 @@ const sinRuta: React.FC = () => {
 
 
       <footer className="p-4 bg-muted">
-        <div className="grid grid-cols-3 gap-4">
-          <button onClick={() => router.push('/menu')} className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
+        <div className="flex justify-between items-center gap-4">
+          <button onClick={() => router.push('/menu')} className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
             <Menu className="mr-4 h-6 w-6" />
             <span className="pl-2">Menú</span>
           </button>
-          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
-            <MoreHorizontal className="mr-4 h-6 w-6" />
-            <span className="pl-2">Más opciones</span>
-          </button>
-          <button  onClick={logout} className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
+          <button onClick={logout} className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
             <LogOut className="mr-4 h-6 w-6" />
             <span className="pl-2">Salir</span>
           </button>

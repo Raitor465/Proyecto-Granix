@@ -121,11 +121,11 @@ useEffect(() => {
 }, [clienteInfo]);
 
 useEffect(() => {
-  console.log({
-    pagina_actual,
-    totalPages,
-    clientes: clienteInfo.length
-  });
+  // console.log({
+  //   pagina_actual,
+  //   totalPages,
+  //   clientes: clienteInfo.length
+  // });
 }, [pagina_actual, clienteInfo]);
 
 
@@ -520,17 +520,13 @@ useEffect(() => {
         </div>
       )}
       <footer className="p-4 bg-muted">
-        <div className="grid grid-cols-3 gap-4">
-          <button onClick={() => router.push('/menu')} className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
+        <div className="flex justify-between items-center gap-4">
+          <button onClick={() => router.push('/menu')} className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
             <Menu className="mr-4 h-6 w-6" />
             <span className="pl-2">Menú</span>
           </button>
-          <button className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center">
-            <MoreHorizontal className="mr-4 h-6 w-6" />
-            <span className="pl-2">Más opciones</span>
-          </button>
-            <button
-            className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 w-full flex items-center"
+          <button
+            className="bg-gray-300 p-4 text-lg rounded-lg hover:bg-gray-400 transition duration-200 flex items-center"
             onClick={logout}
           >
             <LogOut className="mr-4 h-6 w-6" />
