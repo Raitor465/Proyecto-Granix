@@ -179,6 +179,7 @@ const OfflineFirstForm: React.FC = () => {
 
     alert('Datos guardados correctamente');
 
+    // Clientes CON ruta de visita
     const { data: rutaVisita, error } = await supabase
       .from('ClienteSucursal')
       .select(`
@@ -195,8 +196,27 @@ const OfflineFirstForm: React.FC = () => {
 
     if (error) throw new Error(error.message);
 
+    // Clientes SIN ruta de visita (ruta_visita_id es null)
+    const { data: sinRutaVisita, error: errorSinRuta } = await supabase
+      .from('ClienteSucursal')
+      .select(`
+        nombre, orden_visita, CODCL, TPLIS,
+        Direccion(calle, numero, latitud, longitud),
+        email, notas, telefono, entrega_observaciones,
+        Bonificaciones:CODCA (CODCA_bon,BG_porc),
+        BonificacionesEspeciales:CBOND (NOMBR,PBOND),
+        PercepcionesIva:PERCE(PIVAANO)
+      `)
+      .is('ruta_visita_id', null);
+
+    if (errorSinRuta) throw new Error(errorSinRuta.message);
+
     const clientesConDeudas: any[] = [];
+    const clientesSinRutaConDeudas: any[] = [];
     console.log(rutaVisita)
+    console.log('Clientes sin ruta:', sinRutaVisita)
+    
+    // Procesar clientes CON ruta
     for (const cliente of rutaVisita) {
       const { data: deudas, error: deudasError } = await supabase
         .from('Deudas')
@@ -209,8 +229,21 @@ const OfflineFirstForm: React.FC = () => {
         ...cliente,
         deudas
       });
+    }
+    
+    // Procesar clientes SIN ruta
+    for (const cliente of sinRutaVisita || []) {
+      const { data: deudas, error: deudasError } = await supabase
+        .from('Deudas')
+        .select(`*`)
+        .eq('cliente', cliente.CODCL);
 
-      
+      if (deudasError) throw new Error(deudasError.message);      
+
+      clientesSinRutaConDeudas.push({
+        ...cliente,
+        deudas
+      });
     }
     // Para buscar de supabase los precios y articulos
       const { data: maxNulisList, error: maxNulisError } = await supabase
@@ -276,12 +309,13 @@ const OfflineFirstForm: React.FC = () => {
 
     await tx.done;
 
-    /* const txAux = db.transaction('RutaDeNoVisita','readwrite');
-    for (const cliente of clientesConDeudas) {
+    // Guardar clientes sin ruta en RutaDeNoVisita
+    const txAux = db.transaction('RutaDeNoVisita','readwrite');
+    for (const cliente of clientesSinRutaConDeudas) {
           await txAux.store.put(cliente);
-    } */
+    }
 
-    // await txAux.done;
+    await txAux.done;
     const txtx = db.transaction('Precios','readwrite');
     const preciosStore = txtx.objectStore('Precios');
 

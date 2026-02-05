@@ -7,9 +7,10 @@ export const logout = async () => {
       sessionStorage.removeItem("clientesConError");
 
       const db = await setUpDataBase();
-      const tx = db.transaction(["ClienteSucursal", "RutaDeVisita","Precios","Vendedor"], "readwrite");
+      const tx = db.transaction(["ClienteSucursal", "RutaDeVisita", "RutaDeNoVisita", "Precios","Vendedor"], "readwrite");
       await tx.objectStore("ClienteSucursal").clear();
       await tx.objectStore("RutaDeVisita").clear();
+      await tx.objectStore("RutaDeNoVisita").clear();
       await tx.objectStore("Precios").clear();
       await tx.objectStore("Vendedor").clear();
       await tx.done;
