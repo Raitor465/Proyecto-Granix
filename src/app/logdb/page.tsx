@@ -289,7 +289,7 @@ const OfflineFirstForm: React.FC = () => {
       await preciosStore.put({ TPLIS: tplis, articulos: lista });
     }
 
-    await txtx;
+    await txtx.done;
 
 
     setFormData({ numero: '', clave: '' });
