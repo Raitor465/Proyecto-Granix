@@ -525,18 +525,19 @@ useEffect(() => {
         </div>
 
         <div>
-        {/* <label className="block text-gray-700 font-medium">Ingresar No Compra</label> */}
         <select
-          value={motivoNoCompra ?? ""}
-          className={`w-full border p-2 mt-1 ${
-            resultadoVisita === "DISCONFORME" ? "text-black" : "text-gray-400"
-          }`}
-          disabled={resultadoVisita !== "DISCONFORME"}
-          onChange={(e) => setMotivoNoCompra(e.target.value)}
+          value={resultadoVisita}
+          className="w-full border p-2 mt-1 text-black"
+          onChange={(e) => {
+            const valor = e.target.value as "CONFORME" | "DISCONFORME";
+            setResultadoVisita(valor);
+            if (valor === "CONFORME") {
+              setMotivoNoCompra(null);
+            }
+          }}
         >
-
-          <option value="CONFORME" >Sin disconformidad</option>
-          <option value="DISCONFORME" >Disconformidad</option>
+          <option value="CONFORME">CONFORMIDAD</option>
+          <option value="DISCONFORME">SIN CONFORMIDAD</option>
         </select>
       </div>
 

@@ -241,11 +241,6 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Título */}
-      <div className="p-4">
-        <h1 className="text-2xl font-bold text-center text-black">Ruta de Visita</h1>
-      </div>
-
       {/* Barra de botones principales */}
       <div className="px-4 py-3 bg-white border-b flex justify-between items-center gap-4">
         <button onClick={() => router.push('/menu')} className="flex-1 bg-gray-300 px-4 py-2 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center justify-center">
