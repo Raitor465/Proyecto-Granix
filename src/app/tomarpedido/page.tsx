@@ -150,7 +150,13 @@ useEffect(() => {
         await txArticulos.done 
         const articulosFiltrados = todosLosArticulos.filter(
           (art: any) => art.TPLIS === tplis);
-        setListaFiltrada(articulosFiltrados[0].articulos); 
+        
+        if (articulosFiltrados.length > 0 && articulosFiltrados[0].articulos) {
+          setListaFiltrada(articulosFiltrados[0].articulos);
+        } else {
+          console.error("No se encontraron artículos para el TPLIS:", tplis);
+          setListaFiltrada([]);
+        }
 
         const txPedido = db.transaction("Pedido", "readonly");
         const store = txPedido.objectStore("Pedido");
