@@ -174,6 +174,11 @@ const SinRuta: React.FC = () => {
         </button>
       </div>
 
+      {/* Título */}
+      <div className="p-4">
+        <h1 className="text-2xl font-bold text-center text-black">Sin Ruta de Visita</h1>
+      </div>
+
       {/* Header con paginación */}
       <header className="p-4 bg-primary text-primary-foreground">
         <div className="flex justify-between items-center mb-4">
