@@ -5,7 +5,7 @@ import { useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut,
   Clipboard, Tag, MapPin, DollarSign, FileText, RefreshCw, Map, X,
-  Wallet, ShoppingCart
+  Wallet, ShoppingCart, ClipboardList
 } from 'lucide-react';
 import { Cliente } from "../crearruta/page";
 import { setUpDataBase } from "@/lib/indexedDB";
@@ -262,9 +262,25 @@ useEffect(() => {
             <ChevronLeft className="h-4 w-4" />
             <span className="sr-only">Página anterior</span>
           </button>
-          <span className="text-xl font-bold text-primary">
-            Página {pagina_actual} de {totalPages}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push('/resumen')}
+              className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 transition duration-200 flex items-center gap-1.5 text-sm"
+            >
+              <ClipboardList className="h-4 w-4" />
+              <span>Resumen</span>
+            </button>
+            <span className="text-xl font-bold text-primary">
+              Página {pagina_actual} de {totalPages}
+            </span>
+            <button
+              onClick={() => setMostrarCarrito(true)}
+              className="bg-blue-500 text-white px-3 py-1.5 rounded-md hover:bg-blue-600 transition duration-200 flex items-center gap-1.5 text-sm"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span>Carrito</span>
+            </button>
+          </div>
           <div className="flex flex-col items-center gap-1">
             <button
               onClick={sigPag}
@@ -273,13 +289,6 @@ useEffect(() => {
             >
               <ChevronRight className="h-4 w-4" />
               <span className="sr-only">Página siguiente</span>
-            </button>
-            <button
-              onClick={() => setMostrarCarrito(true)}
-              className="bg-blue-500 text-white px-3 py-1.5 rounded-md hover:bg-blue-600 transition duration-200 flex items-center gap-1.5 text-sm"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              <span>Carrito</span>
             </button>
           </div>
         </div>
