@@ -404,11 +404,6 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
               }
 
               // 4. ACTUALIZAR la deuda a estado "comprobante_pendiente" en Supabase
-              console.log('Intentando actualizar deuda:', {
-              deuda_id: item.deuda_id,
-              operacion: item.operacion,
-              tipo: typeof item.deuda_id
-            });
               const { error: errorUpdateDeuda } = await supabase
                 .from('Deudas')
                 .update({ estado_pago: 'comprobante_pendiente' })
