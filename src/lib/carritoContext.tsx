@@ -53,7 +53,7 @@ export type Pedido = {
   tipo: 'pedido';
   cliente_id: number;
   cliente_nombre: string;
-  items: any[];                   // Array de artículos del pedido
+  items: unknown[];                   // Array de artículos del pedido
   total: number;                  // Total del pedido
   fecha: string;
   sincronizado: boolean;
@@ -92,7 +92,7 @@ export type RegistroDeuda = {
   tipo: 'registro_deuda';
   cliente_id: number;
   cliente_nombre: string;
-  deuda_info: any;
+  deuda_info: unknown;
   fecha: string;
   sincronizado: boolean;
 };
@@ -123,8 +123,8 @@ export type ActualizacionDatos = {
   tipo: 'actualizacion_datos';
   cliente_id: number;
   cliente_nombre: string;
-  datos_anteriores: any;          // Estado anterior de los datos
-  datos_nuevos: any;              // Estado nuevo de los datos
+  datos_anteriores: Record<string, unknown>;          // Estado anterior de los datos
+  datos_nuevos: Record<string, unknown>;              // Estado nuevo de los datos
   fecha: string;
   sincronizado: boolean;
 };
@@ -292,7 +292,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
           switch (item.tipo) {
             case 'pedido':
               // CASO 1: Guardar pedido en la tabla "pedidos" de Supabase
-              const { data: dataPedido, error: errorPedido } = await supabase
+              const { error: errorPedido } = await supabase
                 .from('pedidos')
                 .insert({
                   cliente_id: item.cliente_id,
@@ -310,7 +310,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
             case 'precio':
               // CASO 2: Guardar/actualizar precio en la tabla "precios_clientes"
               // upsert: inserta si no existe, actualiza si ya existe
-              const { data: dataPrecio, error: errorPrecio } = await supabase
+              const { error: errorPrecio } = await supabase
                 .from('precios_clientes')
                 .upsert({
                   cliente_id: item.cliente_id,
@@ -329,7 +329,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
 
             case 'ubicacion':
               // CASO 3: Actualizar latitud y longitud del cliente en la tabla ubicacion
-              const { data: dataUbicacion, error: errorUbicacion } = await supabase
+              const { error: errorUbicacion } = await supabase
                 .from('ubicacion')
                 .update({
                   latitude: item.latitud_nueva,
@@ -346,13 +346,13 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
             case 'actualizacion_datos':
               // CASO 4: Actualizar información general del cliente
               // Solo actualizamos las columnas que existen en la tabla
-              const updateData: any = {};
+              const updateData: Record<string, unknown> = {};
               if (item.datos_nuevos.telefono !== undefined) updateData.telefono = item.datos_nuevos.telefono;
               if (item.datos_nuevos.email !== undefined) updateData.email = item.datos_nuevos.email;
               if (item.datos_nuevos.notas !== undefined) updateData.notas = item.datos_nuevos.notas;
               if (item.datos_nuevos.orden_visita !== undefined) updateData.orden_visita = item.datos_nuevos.orden_visita;
 
-              const { data: dataDatos, error: errorDatos } = await supabase
+              const { error: errorDatos } = await supabase
                 .from('ClienteSucursal')
                 .update(updateData)
                 .eq('CODCL', item.cliente_id);
@@ -368,7 +368,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
 
               // 1. Subir archivo a Supabase Storage
               const fileName = `comprobantes/${Date.now()}_${item.archivo_nombre}`;
-              const { data: uploadData, error: uploadError } = await supabase
+              const { error: uploadError } = await supabase
                 .storage
                 .from('pagos')
                 .upload(fileName, item.archivo_data, {
@@ -426,7 +426,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
 
                 if (cliente && cliente.deudas) {
                   // Actualizar la deuda específica
-                  const deudasActualizadas = cliente.deudas.map((deuda: any) => {
+                  const deudasActualizadas = cliente.deudas.map((deuda: Record<string, unknown>) => {
                     if (deuda.id === item.deuda_id) {
                       return { ...deuda, estado_pago: 'comprobante_pendiente' };
                     }
@@ -451,7 +451,7 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
               break;
             case 'registro_deuda':
               // CASO 6: Guardar información de deuda
-              const { data: dataDeuda, error: errorDeuda } = await supabase
+              const { error: errorDeuda } = await supabase
                 .from('deudas')
                 .insert({
                   cliente_id: item.cliente_id,
@@ -469,12 +469,12 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
           // Si llegó aquí sin lanzar error, el item se sincronizó correctamente
           console.log('Item sincronizado exitosamente:', item.tipo);
           exitosos.push(item);
-        } catch (error: any) {
+        } catch (error: unknown) {
           // Capturar error específico de este item y continuar con los demás
           console.error('Error al sincronizar item:', error);
           fallidos.push({
             item,
-            error: error.message || error.toString() || 'Error desconocido'
+            error: error instanceof Error ? error.message : String(error)
           });
         }
       }
@@ -542,14 +542,14 @@ export function CarritoProvider({ children }: { children: React.ReactNode }) {
         );
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       // ❌ ERROR CRÍTICO: Error de conexión o error inesperado
       // No se modifica nada para que el usuario pueda reintentar
       console.error('Error durante la sincronización:', error);
       alert(
         '❌ Error de conexión durante la sincronización.\n' +
         'No se realizaron cambios en el carrito.\n' +
-        'Error: ' + (error.message || error.toString()) + '\n' +
+        'Error: ' + (error instanceof Error ? error.message : String(error)) + '\n' +
         'Por favor, verifica tu conexión a internet e intenta nuevamente.'
       );
     }

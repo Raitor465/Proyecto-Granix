@@ -24,7 +24,7 @@ async function MirarVendedores(){
   tx.done;             
 }
 
-export async function guardarVendedorLocal(vendedor: any){
+async function guardarVendedorLocal(vendedor: unknown){
   try{
     const db = await setUpDataBase();
     const tx = db.transaction('Vendedor','readwrite');

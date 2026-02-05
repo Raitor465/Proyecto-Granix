@@ -1,0 +1,20 @@
+import { setUpDataBase } from "./indexedDB";
+
+export const logout = async () => {
+    try {
+      sessionStorage.setItem("isLoggedIn", "false");
+      sessionStorage.removeItem("clientesSincronizados");
+      sessionStorage.removeItem("clientesConError");
+
+      const db = await setUpDataBase();
+      const tx = db.transaction(["ClienteSucursal", "RutaDeVisita","Precios","Vendedor"], "readwrite");
+      await tx.objectStore("ClienteSucursal").clear();
+      await tx.objectStore("RutaDeVisita").clear();
+      await tx.objectStore("Precios").clear();
+      await tx.objectStore("Vendedor").clear();
+      await tx.done;
+      console.log("Session storage cleared and navigating to home");
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+  };

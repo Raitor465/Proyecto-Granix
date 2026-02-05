@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { setUpDataBase } from "@/lib/indexedDB";
 import { Cliente } from "../crearruta/page";
 import Link from 'next/link';
-import { logout } from "../rutavisita/page";
+import { logout } from "@/lib/auth";
 
 const botones_por_pagina = 5;
 
@@ -20,7 +20,7 @@ const opciones = [
   { name: "Geocalizar", icon: Map, link: "/geocalizar" },
 ];
 
-const sinRuta: React.FC = () => {
+const SinRuta: React.FC = () => {
   const router = useRouter();
   const [clienteInfo, setClienteInfo] = useState<Cliente[]>([]);
   const [pagina_actual, setpagina_actual] = useState(1);
@@ -265,4 +265,4 @@ const sinRuta: React.FC = () => {
   );
 };
 
-export default sinRuta;
+export default SinRuta;

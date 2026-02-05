@@ -2,7 +2,7 @@
 import React, { useEffect } from "react";
 import { Route, Ban, FileText, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { logout } from "../rutavisita/page";
+import { logout } from "@/lib/auth";
 
 const MenuInicial: React.FC = () => {
   const router = useRouter();

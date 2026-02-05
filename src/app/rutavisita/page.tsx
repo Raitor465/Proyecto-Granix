@@ -12,6 +12,7 @@ import { setUpDataBase } from "@/lib/indexedDB";
 import Link from 'next/link';
 import { useRouter } from "next/navigation";
 import { useCarrito } from "@/lib/carritoContext";
+import { logout } from "@/lib/auth";
 
 const botones_por_pagina = 5;
 
@@ -24,28 +25,6 @@ const opciones = [
   { name: "Actualizar Datos", icon: RefreshCw, link: "/actualizardatos" },
   { name: "Geocalizar", icon: Map, link: "/geocalizar" },
 ];
-
-
-export const logout = async () => {
-    try {
-      sessionStorage.setItem("isLoggedIn", "false");
-      sessionStorage.removeItem("clientesSincronizados");
-      sessionStorage.removeItem("clientesConError");
-
-      const db = await setUpDataBase();
-      const tx = db.transaction(["ClienteSucursal", "RutaDeVisita","Precios","Vendedor"], "readwrite");
-      await tx.objectStore("ClienteSucursal").clear();
-      await tx.objectStore("RutaDeVisita").clear();
-      await tx.objectStore("Precios").clear();
-      await tx.objectStore("Vendedor").clear();
-      await tx.done;
-
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Error durante el logout", error);
-      alert("Ocurrió un error al cerrar sesión");
-    }
-  };
 
   const tieneDeudas = (cliente : Cliente) => {
       return Array.isArray((cliente as any).deudas) && (cliente as any).deudas.length > 0;
@@ -447,12 +426,12 @@ useEffect(() => {
                                     <p className="text-sm text-gray-600">Información del cliente actualizada</p>
                                     {item.datos_anteriores.telefono !== item.datos_nuevos.telefono && (
                                       <p className="text-xs text-gray-500">
-                                        Tel: {item.datos_anteriores.telefono} → {item.datos_nuevos.telefono}
+                                        Tel: {String(item.datos_anteriores.telefono)} → {String(item.datos_nuevos.telefono)}
                                       </p>
                                     )}
                                     {item.datos_anteriores.email !== item.datos_nuevos.email && (
                                       <p className="text-xs text-gray-500">
-                                        Email: {item.datos_anteriores.email} → {item.datos_nuevos.email}
+                                        Email: {String(item.datos_anteriores.email)} → {String(item.datos_nuevos.email)}
                                       </p>
                                     )}
                                   </div>

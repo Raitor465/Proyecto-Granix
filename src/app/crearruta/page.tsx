@@ -25,9 +25,9 @@ export interface Cliente {
     telefono: string;
     notas: string;
     entrega_observaciones: string;
-    Bonificaciones: {Bon_general : string , BG_porc : Float16Array}
-    BonificacionesEspeciales: {NOMBR: string , PBOND : Float16Array}
-    PercepcionesIva: {PIVAANO : Float16Array}
+    Bonificaciones: {Bon_general : string , BG_porc : number}
+    BonificacionesEspeciales: {NOMBR: string , PBOND : number}
+    PercepcionesIva: {PIVAANO : number}
 }
 
 interface RutaInfo{
@@ -55,7 +55,7 @@ const dias = [
   {name: "Todos las rutas", id:6 },
 ]
 
-export const CrearRuta: React.FC = () => {
+const CrearRuta: React.FC = () => {
   const [frecuenciaSeleccionada, setFrecuenciaSeleccionada] = useState<number[]>([]); // Cambiar de número a un array de números
   const [rutasFiltradas, setRutasFiltradas] = useState<Cliente[]>([]);
   const [rutaInfo, setRutaInfo] = useState<Cliente[]>([]);

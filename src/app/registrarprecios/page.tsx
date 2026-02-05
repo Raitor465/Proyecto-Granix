@@ -252,14 +252,14 @@ export default function RegistrarPrecio() {
             // 7. INTEGRACIÓN CARRITO: Crear el objeto de cambio para el carrito global
             // IMPORTANTE: Incluir 'tipo: precio' para identificarlo en la sincronización
             const cambio = {
-                tipo: 'precio',                   // Identifica que es un cambio de precio
-                cliente_id: clienteSeleccionado,  // ID del cliente
+                tipo: 'precio' as const,          // Identifica que es un cambio de precio
+                cliente_id: parseInt(clienteSeleccionado, 10),  // ID del cliente como number
                 cliente_nombre: nombreCliente,    // Nombre para mostrar
                 articulo_id: codigo,              // Código del artículo
                 articulo_nombre: articulo.Articulos?.nombre || 'Sin nombre',
                 precio_anterior: precioAnterior,  // Precio original
                 precio_nuevo: nuevoPrecio,        // Precio modificado
-                tplis: tplisSeleccionado,
+                tplis: tplisSeleccionado?.toString() || '1',  // Tipo de lista de precios como string
                 fecha_modificacion: new Date().toISOString(),
                 sincronizado: false
             };

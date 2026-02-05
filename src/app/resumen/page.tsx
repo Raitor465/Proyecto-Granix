@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { setUpDataBase } from '@/lib/indexedDB';
-import Image from 'next/image';
+import { ItemCarrito } from '@/lib/carritoContext';
 
 interface ItemPedido {
   articulo: {
@@ -76,8 +76,8 @@ export default function Resumen() {
       
       // Filtrar solo los items de tipo 'pedido'
       const pedidosNoSincronizados = cambiosPendientes
-        .filter(item => item.tipo === 'pedido')
-        .map(p => ({ 
+        .filter((item: ItemCarrito) => item.tipo === 'pedido')
+        .map((p: ItemCarrito) => ({ 
           ...p, 
           sincronizado: false 
         }));
