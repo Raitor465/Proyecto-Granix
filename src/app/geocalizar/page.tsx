@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase';
 import { setUpDataBase } from '@/lib/indexedDB';
 import { Cliente } from '../crearruta/page';
 import { LogOut} from 'lucide-react';
-import { useCarrito } from '@/lib/carritoContext';
 
 interface LocationData {
   id : number;
@@ -16,7 +15,6 @@ interface LocationData {
 }
 
 export default function GeolocalizarPage() {
-  const { agregarItem } = useCarrito();
   const [locationData, setLocation] = useState<LocationData | null>(null);
   const [locationActual, setLocationActual] = useState<LocationData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -102,6 +100,7 @@ export default function GeolocalizarPage() {
     }
 
     try {
+      // 1. Actualizar en IndexedDB (local)
       const db = await setUpDataBase();
       const tx = db.transaction('ClienteSucursal', 'readwrite');
       const store = tx.store;
@@ -113,27 +112,98 @@ export default function GeolocalizarPage() {
         setIsLoading(false);
         return;
       }
-  
-      cliente.Direccion.latitud = locationActual.latitude;
-      cliente.Direccion.longitud = locationActual.longitude;
-  
-      await store.put(cliente);
+
+      // Crear una copia profunda del cliente para evitar problemas de referencia
+      const clienteActualizado = JSON.parse(JSON.stringify(cliente));
+      clienteActualizado.Direccion.latitud = locationActual.latitude;
+      clienteActualizado.Direccion.longitud = locationActual.longitude;
+
+      // Eliminar el registro viejo y agregar el nuevo
+      await store.delete(locationData.id);
+      await store.add(clienteActualizado);
       
-      // Agregar al carrito global
-      await agregarItem({
-        tipo: 'ubicacion',
-        cliente_id: cliente.CODCL,
-        cliente_nombre: cliente.nombre,
-        latitud_anterior: locationData.latitude,
-        longitud_anterior: locationData.longitude,
-        latitud_nueva: locationActual.latitude,
-        longitud_nueva: locationActual.longitude,
-        fecha: new Date().toISOString(),
-        sincronizado: false
+      await tx.done;
+      
+      // Cerrar la conexión para forzar que se reabra en la próxima lectura
+      db.close();
+
+      // Verificar que se guardó correctamente leyendo de nuevo
+      const db2 = await setUpDataBase();
+      const tx2 = db2.transaction('ClienteSucursal', 'readonly');
+      const clienteVerificado = await tx2.store.get(locationData.id);
+      console.log('🔍 Verificación - Cliente después de guardar:', clienteVerificado);
+      console.log('🔍 Coordenadas verificadas:', {
+        lat: clienteVerificado.Direccion.latitud,
+        lng: clienteVerificado.Direccion.longitud
       });
-  
-      alert('Ubicación actualizada exitosamente y agregada al carrito.');
+      await tx2.done;
+
+      // 2. Obtener el direccion_id del cliente en Supabase
+      const { data: clienteData, error: clienteError } = await supabase
+        .from('ClienteSucursal')
+        .select('direccion_id')
+        .eq('CODCL', locationData.id)
+        .single();
+
+      if (clienteError || !clienteData) {
+        console.error('Error al obtener cliente de Supabase:', clienteError);
+        setError('Ubicación guardada localmente, pero no se pudo obtener la información del servidor.');
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. Actualizar la tabla Direccion en Supabase
+      const { error: supabaseError } = await supabase
+        .from('Direccion')
+        .update({
+          latitud: locationActual.latitude,
+          longitud: locationActual.longitude
+        })
+        .eq('direccion_id', clienteData.direccion_id);
+
+      if (supabaseError) {
+        console.error('Error al actualizar en Supabase:', supabaseError);
+        setError('Ubicación guardada localmente, pero hubo un error al sincronizar con el servidor: ' + supabaseError.message);
+      } else {
+        // Recargar el cliente desde Supabase para sincronizar IndexedDB
+        const { data: clienteActualizado, error: errorRecarga } = await supabase
+          .from('ClienteSucursal')
+          .select('*, Direccion(*)')
+          .eq('CODCL', locationData.id)
+          .single();
+        
+        if (!errorRecarga && clienteActualizado) {
+          // Actualizar IndexedDB con los datos frescos de Supabase
+          const db3 = await setUpDataBase();
+          const tx3 = db3.transaction('ClienteSucursal', 'readwrite');
+          
+          // Eliminar el viejo
+          await tx3.store.delete(locationData.id);
+          
+          // Transformar los datos para que coincidan con la estructura esperada
+          const clienteParaIndexedDB = {
+            ...clienteActualizado,
+            Direccion: {
+              calle: clienteActualizado.Direccion.calle,
+              numero: clienteActualizado.Direccion.numero,
+              latitud: clienteActualizado.Direccion.latitud,
+              longitud: clienteActualizado.Direccion.longitud
+            }
+          };
+          
+          // Agregar el nuevo con datos de Supabase
+          await tx3.store.add(clienteParaIndexedDB);
+          await tx3.done;
+          db3.close();
+          
+          alert('Ubicación actualizada exitosamente en local y en el servidor.');
+        } else {
+          console.error('Error al recargar desde Supabase:', errorRecarga);
+          alert('Ubicación actualizada en Supabase pero hubo un error al sincronizar localmente.');
+        }
+      }
     } catch (error) {
+      console.error('Error al guardar ubicación:', error);
       setError('Error al guardar la ubicación: ' + (error as Error).message);
     } finally {
       setIsLoading(false);

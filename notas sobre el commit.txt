@@ -1,0 +1,6 @@
+# Notas sobre el commit
+
+Sobre este commit: 
+1- El mapa toma directamente las cordenadas de la base de datos, pero solo funciona online
+2- Geolocalizar cambia las cordenadas de la base de datos sin problemas
+3- El mapa dejó de usar IDB 
