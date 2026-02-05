@@ -4,24 +4,30 @@ import React from "react"
 
 import { useEffect, useState, useRef } from "react"
 import { setUpDataBase } from "@/lib/indexedDB"
+import { useCarrito } from "@/lib/carritoContext"
 // import type { Cliente, Deuda } from "@/lib/types"  
 
 export type Deuda = {
-  tipo: string
-  operacion: number
-  importe: number
-  fechaVencimiento: string
-  filial: number
-  vendedor: number
+  id: number;
+  tipo: string;
+  operacion: number;
+  importe: number;
+  fechaVencimiento: string;
+  filial: number;
+  vendedor: number;
+  estado_pago?: 'pendiente' | 'pagado' | 'comprobante_pendiente';  
 }
 
 export type Cliente = {
-  id?: number
+  CODCL: number           // <-- ID real del cliente en tu BD
   nombre: string
-  direccion: string
-  telefono: string
+  Direccion: {            // <-- Objeto con calle y numero
+    calle: string
+    numero: string
+  }
   deudas: Deuda[]
 }
+
 import {
   ArrowLeft,
   FileText,
@@ -89,6 +95,7 @@ function formatFileSize(bytes: number) {
 type UploadedFile = {
   file: File
   preview: string | null
+  arrayBuffer: ArrayBuffer  // <-- Necesario para guardar en IndexedDB
 }
 
 /* =======================
@@ -106,6 +113,80 @@ function DeudaSelectionCard({
 }) {
   const status = getVencimientoStatus(deuda.fechaVencimiento)
 
+  // Si tiene comprobante pendiente (ya enviado a Supabase, esperando aprobación)
+  // Si tiene comprobante pendiente (estado_pago viene de IndexedDB)
+  if (deuda.estado_pago === 'comprobante_pendiente') {
+    return (
+      <div className="w-full text-left rounded-xl border-2 border-purple-200 bg-purple-50 opacity-75 cursor-not-allowed">
+        <div className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-5 h-5 rounded-full border-2 border-purple-400 bg-purple-100 flex items-center justify-center">
+                <CheckCircle2 className="h-3 w-3 text-purple-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-purple-600" />
+                  <span className="font-semibold text-purple-900">{deuda.tipo}</span>
+                </div>
+                <p className="text-sm text-purple-700">Op. #{deuda.operacion}</p>
+              </div>
+            </div>
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-purple-200 text-purple-800 border-purple-300">
+              Pago en Revisión
+            </span>
+          </div>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-purple-200">
+            <div className="flex items-center gap-2 text-sm text-purple-700">
+              <Calendar className="h-4 w-4" />
+              {formatDate(deuda.fechaVencimiento)}
+            </div>
+            <span className="text-lg font-bold text-purple-900">
+              {formatCurrency(deuda.importe)}
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Si ya está pagada (aprobada)
+  if (deuda.estado_pago === 'pagado') {
+    return (
+      <div className="w-full text-left rounded-xl border-2 border-emerald-200 bg-emerald-50 opacity-75 cursor-not-allowed">
+        <div className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-5 h-5 rounded-full border-2 border-emerald-400 bg-emerald-100 flex items-center justify-center">
+                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-emerald-600" />
+                  <span className="font-semibold text-emerald-900">{deuda.tipo}</span>
+                </div>
+                <p className="text-sm text-emerald-700">Op. #{deuda.operacion}</p>
+              </div>
+            </div>
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-emerald-200 text-emerald-800 border-emerald-300">
+              Pagado
+            </span>
+          </div>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-emerald-200">
+            <div className="flex items-center gap-2 text-sm text-emerald-700">
+              <Calendar className="h-4 w-4" />
+              {formatDate(deuda.fechaVencimiento)}
+            </div>
+            <span className="text-lg font-bold text-emerald-900">
+              {formatCurrency(deuda.importe)}
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Deuda disponible para pagar (estado_pago = 'pendiente' o null)
   return (
     <button
       type="button"
@@ -156,7 +237,6 @@ function DeudaSelectionCard({
     </button>
   )
 }
-
 function FileUploader({
   uploadedFile,
   onFileSelect,
@@ -316,6 +396,7 @@ function EmptyState() {
 ======================= */
 
 export default function PagoPage() {
+  const { agregarItem, carrito } = useCarrito()
   const [deudas, setDeudas] = useState<Deuda[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedDeuda, setSelectedDeuda] = useState<Deuda | null>(null)
@@ -323,7 +404,7 @@ export default function PagoPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
-  useEffect(() => {
+    useEffect(() => {
     const loadDeudas = async () => {
       setIsLoading(true)
       try {
@@ -332,7 +413,19 @@ export default function PagoPage() {
         const clientes = (await tx.store.getAll()) as Cliente[]
 
         const deudasCliente = clientes[0]?.deudas ?? []
-        setDeudas(deudasCliente)
+        
+        // Verificar qué deudas ya están en el carrito
+        const deudasConEstado = deudasCliente.map(deuda => {
+          const enCarrito = carrito.some(
+            (item: any) => item.tipo === 'comprobante_pago' && item.deuda_id === deuda.id
+          )
+          return {
+            ...deuda,
+            estado: enCarrito ? 'pendiente_carrito' as const : 'disponible' as const
+          }
+        })
+        
+        setDeudas(deudasConEstado)
 
         await tx.done
       } catch (error) {
@@ -344,9 +437,9 @@ export default function PagoPage() {
     }
 
     loadDeudas()
-  }, [])
+  }, [carrito]) // <-- Agregar carrito como dependencia
 
-  const handleFileSelect = (file: File) => {
+    const handleFileSelect = async (file: File) => {  // <-- async
     const maxSize = 10 * 1024 * 1024 // 10MB
     if (file.size > maxSize) {
       alert("El archivo es demasiado grande. El tamaño máximo es 10MB.")
@@ -358,7 +451,8 @@ export default function PagoPage() {
       preview = URL.createObjectURL(file)
     }
 
-    setUploadedFile({ file, preview })
+    const arrayBuffer = await file.arrayBuffer()  // <-- Obtener el binario
+    setUploadedFile({ file, preview, arrayBuffer })  // <-- Guardar arrayBuffer
   }
 
   const handleFileRemove = () => {
@@ -368,17 +462,58 @@ export default function PagoPage() {
     setUploadedFile(null)
   }
 
-  const handleSubmit = async () => {
+    const handleSubmit = async () => {
     if (!selectedDeuda || !uploadedFile) return
 
     setIsSubmitting(true)
 
-    // Simular envío
-    //Completar para enviar a la base de datos 
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      // Obtener el cliente actual de IndexedDB
+      const db = await setUpDataBase()
+      const tx = db.transaction("ClienteSucursal", "readonly")
+      const clientes = await tx.objectStore("ClienteSucursal").getAll()
+      const cliente = clientes[0] as Cliente
 
-    setIsSubmitting(false)
-    setSubmitSuccess(true)
+      if (!cliente) {
+        alert("No se encontró el cliente")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Crear el item para el carrito
+      const nuevoPago = {
+        tipo: 'comprobante_pago' as const,
+        cliente_id: cliente.CODCL,
+        cliente_nombre: cliente.nombre,
+        deuda_id: selectedDeuda.id,
+        operacion: selectedDeuda.operacion,
+        tipo_factura: selectedDeuda.tipo,
+        importe: selectedDeuda.importe,
+        fecha_vencimiento: selectedDeuda.fechaVencimiento,
+        filial: selectedDeuda.filial,
+        vendedor: selectedDeuda.vendedor,
+        archivo_data: uploadedFile.arrayBuffer,
+        archivo_nombre: uploadedFile.file.name,
+        archivo_tipo: uploadedFile.file.type,
+        archivo_size: uploadedFile.file.size,
+        fecha: new Date().toISOString(),
+        sincronizado: false
+      }
+
+      // Agregar al carrito
+      await agregarItem(nuevoPago)
+
+      // Limpiar y mostrar éxito
+      setSelectedDeuda(null)
+      handleFileRemove()
+      setSubmitSuccess(true)
+      
+    } catch (error) {
+      console.error("Error al agregar al carrito:", error)
+      alert("Error al guardar el pago. Intenta nuevamente.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleBack = () => {
@@ -397,11 +532,12 @@ export default function PagoPage() {
           <div className="bg-emerald-100 p-4 rounded-full w-fit mx-auto mb-4">
             <CheckCircle2 className="h-10 w-10 text-emerald-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Comprobante enviado
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">
+            ¡Agregado al carrito!
           </h2>
           <p className="text-gray-500 mb-6">
-            Tu comprobante de pago para la operación #{selectedDeuda?.operacion} ha sido enviado correctamente.
+            El comprobante de pago se guardó en el carrito. 
+            Sincronizá todos los cambios desde el menú principal.
           </p>
           <button
             type="button"
@@ -523,9 +659,9 @@ export default function PagoPage() {
                 Enviando...
               </>
             ) : (
-              <>
+                          <>
                 <Upload className="h-5 w-5" />
-                Enviar comprobante
+                Agregar al carrito
               </>
             )}
           </button>

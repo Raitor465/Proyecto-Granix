@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { setUpDataBase } from "@/lib/indexedDB"
+
 // import type { Cliente, Deuda } from "@/lib/types"
 export type Deuda = {
   tipo: string

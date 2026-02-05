@@ -1,4 +1,3 @@
-// src/app/actualizardatos/page.tsx
 "use client";
 
 import { setUpDataBase } from "@/lib/indexedDB";
@@ -77,10 +76,6 @@ export default function ActualizarDatos() {
     }
   };
 
-  if (!cliente) return <div>Cargando...</div>;
-
-
-  // Función para manejar la navegación a otra página (ruta de visita)
   const handleNavigation = () => {
     window.location.href = "/rutavisita";
   };

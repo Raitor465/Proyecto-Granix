@@ -276,12 +276,12 @@ const OfflineFirstForm: React.FC = () => {
 
     await tx.done;
 
-    const txAux = db.transaction('RutaDeNoVisita','readwrite');
+    /* const txAux = db.transaction('RutaDeNoVisita','readwrite');
     for (const cliente of clientesConDeudas) {
           await txAux.store.put(cliente);
-    }
+    } */
 
-    await txAux.done;
+    // await txAux.done;
     const txtx = db.transaction('Precios','readwrite');
     const preciosStore = txtx.objectStore('Precios');
 
