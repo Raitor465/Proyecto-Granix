@@ -14,6 +14,9 @@ export const logout = async () => {
       await tx.objectStore("Vendedor").clear();
       await tx.done;
       console.log("Session storage cleared and navigating to home");
+      
+      // Redirigir a la página de login
+      window.location.href = '/';
     } catch (error) {
       console.error("Error during logout:", error);
     }
