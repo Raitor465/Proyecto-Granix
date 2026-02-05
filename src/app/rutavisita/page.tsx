@@ -254,15 +254,15 @@ useEffect(() => {
       </div>
       <header className="p-4 bg-primary text-primary-foreground">
         <div className="flex justify-between items-center">
-          <button
-            onClick={antPag}
-            disabled={pagina_actual === 1}
-            className="bg-gray-300 p-4 rounded-md hover:bg-gray-300 transition duration-200"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="sr-only">Página anterior</span>
-          </button>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={antPag}
+              disabled={pagina_actual === 1}
+              className="bg-gray-300 p-4 rounded-md hover:bg-gray-300 transition duration-200"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="sr-only">Página anterior</span>
+            </button>
             <button
               onClick={() => router.push('/resumen')}
               className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 transition duration-200 flex items-center gap-1.5 text-sm"
@@ -270,25 +270,25 @@ useEffect(() => {
               <ClipboardList className="h-4 w-4" />
               <span>Resumen</span>
             </button>
-            <span className="text-xl font-bold text-primary">
-              Página {pagina_actual} de {totalPages}
-            </span>
+          </div>
+          <span className="text-xl font-bold text-primary">
+            Página {pagina_actual} de {totalPages}
+          </span>
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={sigPag}
+              disabled={pagina_actual === totalPages}
+              className="bg-gray-300 p-4 rounded-md hover:bg-gray-300 transition duration-200"
+            >
+              <ChevronRight className="h-4 w-4" />
+              <span className="sr-only">Página siguiente</span>
+            </button>
             <button
               onClick={() => setMostrarCarrito(true)}
               className="bg-blue-500 text-white px-3 py-1.5 rounded-md hover:bg-blue-600 transition duration-200 flex items-center gap-1.5 text-sm"
             >
               <ShoppingCart className="h-4 w-4" />
               <span>Carrito</span>
-            </button>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <button
-              onClick={sigPag}
-              disabled={pagina_actual === totalPages}
-              className="bg-gray-300 p-2 rounded-md hover:bg-gray-300 transition duration-200"
-            >
-              <ChevronRight className="h-4 w-4" />
-              <span className="sr-only">Página siguiente</span>
             </button>
           </div>
         </div>
