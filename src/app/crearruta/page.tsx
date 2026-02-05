@@ -52,7 +52,18 @@ const CrearRuta: React.FC = () => {
   const [rutasFiltradas, setRutasFiltradas] = useState<Cliente[]>([]);
   const [rutaInfo, setRutaInfo] = useState<Cliente[]>([]);
   const [nombresRutas, setNombresRutas] = useState<RutaInfo[]>([]);
-  const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(null);
+  const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('diaSeleccionado') || null;
+    }
+    return null;
+  });
+  const [rutaSeleccionada, setRutaSeleccionada] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('rutaSeleccionada') || '';
+    }
+    return '';
+  });
     const [sortOrder , setSortOrder] = useState('asc');
     const router = useRouter();
 
@@ -70,12 +81,27 @@ const CrearRuta: React.FC = () => {
     useEffect(() => {
         RutaVisitaInfo();
     }, []);
+    
+    // Restaurar selección de día al cargar
+    useEffect(() => {
+      if (rutaInfo.length > 0 && diaSeleccionado) {
+        const rutasFiltradasActualizadas = rutaInfo.filter(
+          (ruta) => ruta.RutaDeVisita.dia === diaSeleccionado
+        );
+        const nombresUnicos = Array.from(
+          new Set(rutasFiltradasActualizadas.map((ruta: Cliente) => ruta.RutaDeVisita.nombre))
+        ).map((nombre) => ({ CODCL: 0, nombre }));
+        setNombresRutas(nombresUnicos as RutaInfo[]);
+        setRutasFiltradas(rutasFiltradasActualizadas);
+      }
+    }, [rutaInfo]);
 
 
     const handleDiaChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
       const diaId = event.target.value;
       if (diaId === "6") {
         setDiaSeleccionado(null); // Mostrar todas las rutas
+        sessionStorage.removeItem('diaSeleccionado');
         setRutasFiltradas(rutaInfo);
         console.log(rutasFiltradas)
         const nombresUnicos = Array.from(
@@ -86,6 +112,9 @@ const CrearRuta: React.FC = () => {
         const dia = dias.find((d) => d.id.toString() === diaId)?.name || null;
         console.log(dia)
         setDiaSeleccionado(dia);
+        if (dia) {
+          sessionStorage.setItem('diaSeleccionado', dia);
+        }
 
 
         const rutasFiltradasActualizadas = rutaInfo.filter(
@@ -99,6 +128,16 @@ const CrearRuta: React.FC = () => {
         setRutasFiltradas(rutasFiltradasActualizadas);
       }
     };
+    
+    const handleRutaChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+      const rutaNombre = event.target.value;
+      setRutaSeleccionada(rutaNombre);
+      if (rutaNombre) {
+        sessionStorage.setItem('rutaSeleccionada', rutaNombre);
+      } else {
+        sessionStorage.removeItem('rutaSeleccionada');
+      }
+    };
 
 
 
@@ -107,17 +146,19 @@ const CrearRuta: React.FC = () => {
         event.preventDefault();
 
         const formData = new FormData(event.currentTarget);
-        const selectedRutaId = formData.get("ruta");
+        const selectedRutaNombre = formData.get("ruta") as string;
         const sortOrder = formData.get("orden");
         //console.log(selectedRutaId,sortOrder)
-        if (!selectedRutaId) {
+        if (!selectedRutaNombre) {
             alert("Por favor, selecciona una ruta.");
             return;
         }
 
-        // const rutasFiltradas = rutaInfo.filter(ruta => {
-        //     return ruta.RutaDeVisita.ruta_visita_id === Number(selectedRutaId);
-        // })
+        // Filtrar por el nombre de la ruta seleccionada
+        const rutasFiltradas = rutaInfo.filter(ruta => {
+            return ruta.RutaDeVisita.nombre === selectedRutaNombre;
+        });
+        
         const rutasOrdenadas = rutasFiltradas.sort((a, b) =>
             sortOrder === "asc" ? a.orden_visita - b.orden_visita : b.orden_visita - a.orden_visita
           );
@@ -172,11 +213,11 @@ const CrearRuta: React.FC = () => {
               <div className="space-y-4">
               <div>
                   <select
-                    name="ruta"
+                    name="dia"
                     required
                     onChange={handleDiaChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
-                    defaultValue=""
+                    value={diaSeleccionado ? dias.find(d => d.name === diaSeleccionado)?.id.toString() || '' : ''}
                   >
                     <option value="" disabled hidden>
                       Día
@@ -194,13 +235,14 @@ const CrearRuta: React.FC = () => {
                     name="ruta"
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
-                    defaultValue=""
+                    value={rutaSeleccionada}
+                    onChange={handleRutaChange}
                   >
                     <option value="" disabled hidden>
                       Seleccione una ruta
                     </option>
                     {nombresRutas.map((ruta) => (
-                      <option key={ruta.nombre} value={ruta.CODCL}>
+                      <option key={ruta.nombre} value={ruta.nombre}>
                         {ruta.nombre}
                       </option>
                     ))}
