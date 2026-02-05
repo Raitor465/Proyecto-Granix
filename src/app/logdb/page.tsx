@@ -196,7 +196,7 @@ const OfflineFirstForm: React.FC = () => {
 
     if (error) throw new Error(error.message);
 
-    // Clientes SIN ruta de visita (ruta_visita_id es null)
+    // Clientes SIN ruta de visita - TODOS los clientes disponibles en el sistema
     const { data: sinRutaVisita, error: errorSinRuta } = await supabase
       .from('ClienteSucursal')
       .select(`
@@ -206,8 +206,7 @@ const OfflineFirstForm: React.FC = () => {
         Bonificaciones:CODCA (CODCA_bon,BG_porc),
         BonificacionesEspeciales:CBOND (NOMBR,PBOND),
         PercepcionesIva:PERCE(PIVAANO)
-      `)
-      .is('ruta_visita_id', null);
+      `);
 
     if (errorSinRuta) throw new Error(errorSinRuta.message);
 
