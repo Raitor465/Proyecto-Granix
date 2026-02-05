@@ -1,7 +1,7 @@
  'use client'
 import React, { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Menu, MoreHorizontal, LogOut, Clipboard
-  , Tag, MapPin, DollarSign, FileText, RefreshCw, Map, X } from 'lucide-react';
+  , Tag, MapPin, DollarSign, FileText, RefreshCw, Map, X, ShoppingCart, ClipboardList } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { setUpDataBase } from "@/lib/indexedDB";
 import { Cliente } from "../crearruta/page";
@@ -29,6 +29,7 @@ const SinRuta: React.FC = () => {
   const [clientesConPedido, setClientesConPedido] = useState<Set<number>>(new Set());
   const [clientesSincronizados, setClientesSincronizados] = useState<Set<number>>(new Set());
   const [clientesConError, setClientesConError] = useState<Set<number>>(new Set());
+  const [mostrarCarrito, setMostrarCarrito] = useState(false);
 
   const cerrarModal = () => setMostrarModal(false);
  
@@ -153,19 +154,27 @@ const SinRuta: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="p-4">
-        <h1 className="text-2xl font-bold text-center text-black">Sin Ruta de Visita</h1>
-      </div>
-      <div className="px-4 pb-2 flex justify-between items-center gap-4">
-        <button onClick={() => router.push('/menu')} className="bg-gray-300 px-4 py-2 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
+      {/* Barra de botones principales */}
+      <div className="px-4 py-3 bg-white border-b flex justify-between items-center gap-4">
+        <button onClick={() => router.push('/menu')} className="flex-1 bg-gray-300 px-4 py-2 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center justify-center">
           <Menu className="mr-2 h-5 w-5" />
           <span>Menú</span>
         </button>
-        <button onClick={logout} className="bg-gray-300 px-4 py-2 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center">
+        <button onClick={() => router.push('/resumen')} className="flex-1 bg-green-500 text-white px-4 py-2 text-sm rounded-lg hover:bg-green-600 transition duration-200 flex items-center justify-center">
+          <ClipboardList className="mr-2 h-5 w-5" />
+          <span>Resumen</span>
+        </button>
+        <button onClick={() => setMostrarCarrito(true)} className="flex-1 bg-blue-500 text-white px-4 py-2 text-sm rounded-lg hover:bg-blue-600 transition duration-200 flex items-center justify-center">
+          <ShoppingCart className="mr-2 h-5 w-5" />
+          <span>Carrito</span>
+        </button>
+        <button onClick={logout} className="flex-1 bg-gray-300 px-4 py-2 text-sm rounded-lg hover:bg-gray-400 transition duration-200 flex items-center justify-center">
           <LogOut className="mr-2 h-5 w-5" />
           <span>Salir</span>
         </button>
       </div>
+
+      {/* Header con paginación */}
       <header className="p-4 bg-primary text-primary-foreground">
         <div className="flex justify-between items-center mb-4">
           <button
