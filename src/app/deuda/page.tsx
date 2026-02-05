@@ -2,24 +2,29 @@
 
 import { useEffect, useState } from "react"
 import { setUpDataBase } from "@/lib/indexedDB"
+import { useCarrito } from "@/lib/carritoContext"
 
-// import type { Cliente, Deuda } from "@/lib/types"
 export type Deuda = {
+  id: number
   tipo: string
   operacion: number
   importe: number
   fechaVencimiento: string
   filial: number
   vendedor: number
+  estado_pago?: 'pendiente' | 'pagado' | 'comprobante_pendiente' | 'en_carrito'
 }
 
 export type Cliente = {
-  id?: number
+  CODCL: number
   nombre: string
-  direccion: string
-  telefono: string
+  Direccion: {
+    calle: string
+    numero: string
+  }
   deudas: Deuda[]
 }
+
 import {
   LogOut,
   FileText,
@@ -28,6 +33,8 @@ import {
   User,
   DollarSign,
   CheckCircle2,
+  ShoppingCart,
+  Clock,
 } from "lucide-react"
 
 /* =======================
@@ -72,6 +79,34 @@ function getVencimientoStatus(fechaVencimiento: string) {
 function DebtCard({ deuda }: { deuda: Deuda }) {
   const status = getVencimientoStatus(deuda.fechaVencimiento)
 
+  // Determinar el estado del pago para mostrar
+  const getPagoStatus = () => {
+    switch (deuda.estado_pago) {
+      case 'en_carrito':
+        return {
+          label: "En Carrito",
+          className: "bg-amber-100 text-amber-700 border-amber-200",
+          icon: ShoppingCart
+        }
+      case 'comprobante_pendiente':
+        return {
+          label: "Pago en Revisión",
+          className: "bg-purple-100 text-purple-700 border-purple-200",
+          icon: Clock
+        }
+      case 'pagado':
+        return {
+          label: "Pagado",
+          className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+          icon: CheckCircle2
+        }
+      default:
+        return null
+    }
+  }
+
+  const pagoStatus = getPagoStatus()
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm transition-shadow hover:shadow-md">
       <div className="p-4 pb-3">
@@ -80,9 +115,17 @@ function DebtCard({ deuda }: { deuda: Deuda }) {
             <FileText className="h-5 w-5 text-gray-500" />
             <span className="font-semibold text-gray-900">{deuda.tipo}</span>
           </div>
-          <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${status.className}`}>
-            {status.label}
-          </span>
+          <div className="flex gap-2">
+            {pagoStatus && (
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 ${pagoStatus.className}`}>
+                <pagoStatus.icon className="h-3 w-3" />
+                {pagoStatus.label}
+              </span>
+            )}
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${status.className}`}>
+              {status.label}
+            </span>
+          </div>
         </div>
         <p className="text-sm text-gray-500 mt-1">
           Op. #{deuda.operacion}
@@ -156,6 +199,7 @@ function LoadingSkeleton() {
 ======================= */
 
 export default function DeudaPage() {
+  const { carrito } = useCarrito()
   const [deudas, setDeudas] = useState<Deuda[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -168,7 +212,19 @@ export default function DeudaPage() {
         const clientes = (await tx.store.getAll()) as Cliente[]
 
         const deudasCliente = clientes[0]?.deudas ?? []
-        setDeudas(deudasCliente)
+        
+        // Verificar qué deudas ya están en el carrito
+        const deudasConEstado = deudasCliente.map(deuda => {
+          const enCarrito = carrito.some(
+            (item: any) => item.tipo === 'comprobante_pago' && item.deuda_id === deuda.id
+          )
+          return {
+            ...deuda,
+            estado_pago: enCarrito ? 'en_carrito' as const : deuda.estado_pago || 'pendiente'
+          }
+        })
+        
+        setDeudas(deudasConEstado)
 
         await tx.done
       } catch (error) {
@@ -180,7 +236,7 @@ export default function DeudaPage() {
     }
 
     loadDeudas()
-  }, [])
+  }, [carrito])
 
   const totalDeuda = deudas.reduce((total, deuda) => total + deuda.importe, 0)
 
