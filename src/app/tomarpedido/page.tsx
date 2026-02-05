@@ -122,7 +122,7 @@ useEffect(() => {
         }
 
         const cliente = clientes[0]
-        const tplis = cliente.TPLIS
+        const tplis = cliente.TPLIS || 1 // Usar TPLIS 1 por defecto si no existe
         
         if (!tplis) {
           console.error("No se encontró el TPLIS del cliente");
