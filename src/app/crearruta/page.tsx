@@ -248,7 +248,7 @@ const CrearRuta: React.FC = () => {
 
 
               </div>
-              <div>
+              {/* <div>
 
         <div className="space-y-2">
           {arrayFrecuencias.map((frec, index) => (
@@ -265,7 +265,7 @@ const CrearRuta: React.FC = () => {
             </label>
           ))}
         </div>
-    </div>
+    </div> */}
             </div>
             <button
               type="submit"
