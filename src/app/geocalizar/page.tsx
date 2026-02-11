@@ -123,9 +123,6 @@ export default function GeolocalizarPage() {
       await store.add(clienteActualizado);
       
       await tx.done;
-      
-      // Cerrar la conexión para forzar que se reabra en la próxima lectura
-      db.close();
 
       // Verificar que se guardó correctamente leyendo de nuevo
       const db2 = await setUpDataBase();
@@ -194,7 +191,6 @@ export default function GeolocalizarPage() {
           // Agregar el nuevo con datos de Supabase
           await tx3.store.add(clienteParaIndexedDB);
           await tx3.done;
-          db3.close();
           
           alert('Ubicación actualizada exitosamente en local y en el servidor.');
         } else {
